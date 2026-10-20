@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { ListChecksIcon, StatusIcon } from "@/components/Icons";
+import Avatar from "@/components/Avatar";
 
 const EXAMPLE = [
   { title: "Write literature review", owner: "Marta", due: "14 Nov", status: "accepted" },
@@ -39,15 +41,16 @@ export default function Home() {
           {EXAMPLE.map((t) => (
             <li key={t.title} className={`sheet-row status-${t.status}`}>
               <span className="cell-title">{t.title}</span>
-              <span className="cell-owner"><span className="cell-label">Owner </span>{t.owner}</span>
+              <span className="cell-owner"><span className="cell-label">Owner </span><Avatar name={t.owner} />{t.owner}</span>
               <span className="cell-due"><span className="cell-label">Due </span>{t.due}</span>
-              <span className="cell-status"><span className="dot" aria-hidden="true" />{t.status}</span>
+              <span className="cell-status"><StatusIcon status={t.status} />{t.status}</span>
             </li>
           ))}
         </ul>
       </figure>
 
       <p className="how">
+        <ListChecksIcon size={20} className="how-icon" />
         <strong>How it works.</strong> Write each task down, put one name and a date next to it, and
         move it from proposed to accepted to done as the work happens.
       </p>

@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
+import { PlusIcon, StatusIcon, TrashIcon } from "@/components/Icons";
+import Avatar from "@/components/Avatar";
 
 export type Status = "proposed" | "accepted" | "done";
 
@@ -106,9 +108,7 @@ export default function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
           <div className="field">
             <label htmlFor="task-title">Add a new task</label>
             <div className="title-wrap">
-              <svg className="title-plus" width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-                <path d="M10 3v14M3 10h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
+              <PlusIcon size={20} className="title-plus" />
               <input
                 id="task-title"
                 className="input-title"
@@ -166,6 +166,7 @@ export default function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
             </select>
           </div>
           <button type="submit" className="btn btn-primary" disabled={saving} data-testid="core-submit">
+            <PlusIcon size={18} />
             {saving ? "Adding…" : "Add task"}
           </button>
         </div>
@@ -221,6 +222,7 @@ export default function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
                     </span>
                     <span className={`cell-owner${t.assignee ? "" : " muted"}`}>
                       <span className="cell-label">Owner </span>
+                      {t.assignee && <Avatar name={t.assignee} />}
                       {t.assignee ? t.assignee : "Unassigned"}
                     </span>
                     <span className={`cell-due${t.deadline ? "" : " muted"}`}>
@@ -228,7 +230,7 @@ export default function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
                       {t.deadline ? formatDate(t.deadline) : "No date"}
                     </span>
                     <span className="cell-status">
-                      <span className="dot" aria-hidden="true" />
+                      <StatusIcon status={t.status} />
                       <select
                         aria-label={`Status of ${t.title}`}
                         value={t.status}
@@ -246,6 +248,7 @@ export default function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
                         onClick={() => removeTask(t.id)}
                         aria-label={`Delete ${t.title}`}
                       >
+                        <TrashIcon />
                         Delete
                       </button>
                     </span>

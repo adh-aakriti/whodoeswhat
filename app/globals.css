@@ -9,9 +9,10 @@
   --accent: #1f5a3d;       /* 7.9:1 */
   --accent-hover: #16432d;
   --error: #a3261b;        /* 6.6:1 */
-  --dot-proposed: #8a8378;
+  --dot-proposed: #8a8378;  /* status symbols, all >= 3.2:1 on paper and row hover */
   --dot-accepted: #b07a12;
   --dot-done: #2f7a52;
+  --avatar: #e3ded4;        /* ink initial on it: 13:1 */
   --radius: 4px;
 }
 
@@ -100,7 +101,8 @@ a { color: var(--accent); text-underline-offset: 3px; }
 }
 .text-link:hover,
 .text-button:hover { color: var(--accent); text-decoration-color: var(--accent); }
-.text-button.quiet { color: var(--muted); font-weight: 400; font-size: 0.9rem; }
+.text-button.quiet { color: var(--muted); font-weight: 400; font-size: 0.9rem; gap: 0.3rem; }
+.btn { gap: 0.4rem; }
 .text-button.quiet:hover { color: var(--error); text-decoration-color: var(--error); }
 
 .btn {
@@ -195,6 +197,9 @@ body:has(.landing) .brand { font-size: clamp(1.9rem, 7vw, 2.25rem); line-height:
   color: var(--muted);
 }
 .how strong { color: var(--ink); }
+.how-icon { color: var(--accent); vertical-align: -4px; margin-right: 0.4rem; }
+.brand { gap: 0.5rem; }
+.logo-mark { width: 1.25em; height: 1.25em; flex-shrink: 0; color: var(--accent); }
 
 /* ---------- Task sheet (landing example + /app) ---------- */
 
@@ -232,15 +237,29 @@ body:has(.landing) .brand { font-size: clamp(1.9rem, 7vw, 2.25rem); line-height:
   text-transform: capitalize;
   min-height: 24px;
 }
-.dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+.status-icon { flex-shrink: 0; color: var(--dot-proposed); }
+.status-icon-accepted { color: var(--dot-accepted); }
+.status-icon-done { color: var(--dot-done); }
+
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  background: var(--dot-proposed);
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-right: 0.45rem;
+  border-radius: 50%;
+  background: var(--avatar);
+  color: var(--ink);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  vertical-align: middle;
 }
-.status-accepted .dot { background: var(--dot-accepted); }
-.status-done .dot { background: var(--dot-done); }
+.cell-owner { display: flex; align-items: center; min-width: 0; }
+.cell-owner > .cell-label { margin-right: 0.35rem; }
+.landing-sheet .cell-owner { overflow-wrap: normal; } /* fixed example names: never split a word */
 .status-done .cell-title { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--rule-strong); }
 
 /* Status select styled as a quiet text label */
@@ -363,7 +382,7 @@ body:has(.landing) .brand { font-size: clamp(1.9rem, 7vw, 2.25rem); line-height:
     color: var(--muted);
   }
   .sheet-head,
-  .landing-sheet .sheet-row { grid-template-columns: minmax(0, 2.4fr) 1fr 0.8fr 1fr; }
+  .landing-sheet .sheet-row { grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr) minmax(0, 0.65fr) minmax(0, 1.15fr); }
   .sheet-app .sheet-row,
   .app-page .sheet-head { grid-template-columns: minmax(0, 2.6fr) 1.1fr 0.9fr 1.1fr 4rem; }
   .landing-sheet .sheet-head { padding-top: 0.75rem; }
@@ -402,6 +421,24 @@ body:has(.landing) .brand { font-size: clamp(1.9rem, 7vw, 2.25rem); line-height:
   .display { font-size: clamp(3.5rem, 4.2vw, 3.75rem); max-width: none; }
   .landing-sheet { margin-top: 0; }
   .how { grid-column: 1 / -1; margin-top: 4rem; }
+}
+
+/* Narrowest two-column widths: give the headline room for 3 lines and stack the example rows as on mobile. */
+@media (min-width: 900px) and (max-width: 1099px) {
+  .landing { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); column-gap: 3rem; }
+  .landing-sheet .sheet-head { display: none; }
+  .landing-sheet .sheet-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "title title" "owner due" "status status";
+    gap: 0.25rem 1rem;
+    align-items: start;
+    padding: 1rem 0;
+  }
+  .landing-sheet .cell-title { grid-area: title; }
+  .landing-sheet .cell-owner { grid-area: owner; }
+  .landing-sheet .cell-due { grid-area: due; }
+  .landing-sheet .cell-status { grid-area: status; }
+  .landing-sheet .cell-label { position: static; width: auto; height: auto; overflow: visible; clip: auto; }
 }
 
 @media (prefers-reduced-motion: reduce) {

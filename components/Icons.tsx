@@ -80,3 +80,20 @@ export function LogoMark({ size = 24, ...props }: IconProps) {
     </svg>
   );
 }
+
+export function ChevronIcon({ direction, ...props }: IconProps & { direction: "left" | "right" }) {
+  return <Icon {...props}><path d={direction === "left" ? "M15 6l-6 6 6 6" : "M9 6l6 6-6 6"} /></Icon>;
+}
+
+export function ListIcon(props: IconProps) {
+  return <Icon {...props}><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01" /></Icon>;
+}
+
+export function CalendarIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="3.5" y="5" width="17" height="15" rx="1.5" />
+      <path d="M3.5 10h17M8 3v4M16 3v4" />
+    </Icon>
+  );
+}

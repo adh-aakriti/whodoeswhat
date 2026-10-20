@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
-import { PlusIcon, StatusIcon, TrashIcon } from "@/components/Icons";
+import { CalendarIcon, ListIcon, PlusIcon, StatusIcon, TrashIcon } from "@/components/Icons";
 import Avatar from "@/components/Avatar";
+import TaskCalendar from "@/components/TaskCalendar";
 
 export type Status = "proposed" | "accepted" | "done";
 
@@ -32,6 +33,7 @@ export default function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
   const [project, setProject] = useState("");
   // null = "All projects".
   const [filter, setFilter] = useState<string | null>(null);
+  const [view, setView] = useState<"list" | "calendar">("list");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const supabase = createClient();
@@ -75,6 +77,8 @@ export default function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
     const saved = data as Task;
     setTasks((prev) => [saved, ...prev]);
     if (activeFilter !== null && activeFilter !== saved.project) setFilter(null);
+    // A new task always shows up as a core-item, so go back to the list.
+    setView("list");
     setTitle("");
     setAssignee("");
     setDeadline("");
@@ -175,23 +179,41 @@ export default function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
 
       <div className="list-head">
         <h1>Your tasks</h1>
-        {projectNames.length > 1 && (
-          <div className="field filter">
-            <label htmlFor="project-filter">Show</label>
-            <select
-              id="project-filter"
-              value={activeFilter ?? ""}
-              onChange={(e) => setFilter(e.target.value === "" ? null : e.target.value)}
-            >
-              <option value="">All projects</option>
-              {projectNames.map((name) => (
-                <option key={name} value={name}>{name}</option>
-              ))}
-            </select>
+        <div className="list-controls">
+          <div className="view-toggle" role="group" aria-label="View">
+            <button type="button" aria-pressed={view === "list"} onClick={() => setView("list")}>
+              <ListIcon />
+              List
+            </button>
+            <button type="button" aria-pressed={view === "calendar"} onClick={() => setView("calendar")}>
+              <CalendarIcon />
+              Calendar
+            </button>
           </div>
-        )}
+          {projectNames.length > 1 && (
+            <div className="field filter">
+              <label htmlFor="project-filter">Show</label>
+              <select
+                id="project-filter"
+                value={activeFilter ?? ""}
+                onChange={(e) => setFilter(e.target.value === "" ? null : e.target.value)}
+              >
+                <option value="">All projects</option>
+                {projectNames.map((name) => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
       </div>
-      {tasks.length === 0 ? (
+      {view === "calendar" ? (
+        <TaskCalendar
+          tasks={activeFilter === null ? tasks : tasks.filter((t) => t.project === activeFilter)}
+          statusLabels={STATUS_LABELS}
+          onShowList={() => setView("list")}
+        />
+      ) : tasks.length === 0 ? (
         <p className="muted empty">Nothing on the sheet yet. Add the first task above and put a name on it.</p>
       ) : (
         <>

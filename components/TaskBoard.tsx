@@ -124,7 +124,8 @@ export default function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
       <form className="task-form" onSubmit={addTask}>
         {/* Every field is always visible. Only the title is required; the others keep valid defaults. */}
         <div className="field">
-          <label htmlFor="task-title">Add a new task</label>
+          {/* The visible cue is the placeholder; this label keeps a real accessible name for screen readers. */}
+          <label htmlFor="task-title" className="visually-hidden">Add a new task</label>
           <div className="title-wrap">
             <PlusIcon size={20} className="title-plus" />
             <input
@@ -132,6 +133,7 @@ export default function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
               ref={titleRef}
               className="input-title"
               type="text"
+              placeholder="Add a new task"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={200}

@@ -183,7 +183,20 @@ input, select {
   transition: border-color 150ms ease;
 }
 input:hover, select:hover { border-color: var(--ink); }
-input::placeholder { color: #77716a; } /* 4.6:1 on white */
+input::placeholder { color: #77716a; opacity: 1; } /* 4.8:1 on white; opacity 1 stops Firefox fading it */
+
+/* Hidden from sight, still read by screen readers. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
 input:focus-visible, select:focus-visible { outline-offset: 0; border-color: var(--accent); }
 
 /* ---------- Landing ---------- */
@@ -345,7 +358,7 @@ body:has(.landing) .brand { font-size: clamp(1.9rem, 7vw, 2.25rem); line-height:
 .title-wrap { position: relative; }
 .title-plus {
   position: absolute;
-  left: 0.9rem;
+  left: 0.85rem;
   top: 50%;
   transform: translateY(-50%);
   color: var(--accent);
@@ -353,8 +366,9 @@ body:has(.landing) .brand { font-size: clamp(1.9rem, 7vw, 2.25rem); line-height:
 }
 .input-title {
   font-family: var(--font-serif), Georgia, serif;
-  font-size: 1.35rem; /* >= 16px, so iOS does not zoom */
+  font-size: 1.125rem; /* 18px: >= 16px, so iOS does not zoom */
   min-height: 56px;
+  /* Left padding clears the 20px plus icon (0.85rem + 20px) with a gap before the text. */
   padding: 0.5rem 0.85rem 0.5rem 2.75rem;
 }
 .task-form .field label { font-weight: 600; }

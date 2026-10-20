@@ -15,6 +15,7 @@ export type Task = {
 };
 
 const STATUSES: Status[] = ["proposed", "accepted", "done"];
+const STATUS_LABELS: Record<Status, string> = { proposed: "Proposed", accepted: "Accepted", done: "Done" };
 const COLUMNS = "id, title, assignee, deadline, status, created_at";
 
 export default function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
@@ -77,10 +78,12 @@ export default function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
 
   return (
     <>
-      <form className="card form" onSubmit={addTask}>
-        <label>
-          Task
+      <form className="task-form" onSubmit={addTask}>
+        <div className="field">
+          <label htmlFor="task-title">New task</label>
           <input
+            id="task-title"
+            className="input-title"
             type="text"
             placeholder="e.g. Write the introduction"
             value={title}
@@ -89,73 +92,87 @@ export default function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
             required
             data-testid="core-input"
           />
-        </label>
+        </div>
         <div className="row">
-          <label>
-            Assignee <span className="muted">(optional)</span>
+          <div className="field">
+            <label htmlFor="task-assignee">Owner <span className="muted">(optional)</span></label>
             <input
+              id="task-assignee"
               type="text"
               placeholder="Who owns it?"
               value={assignee}
               onChange={(e) => setAssignee(e.target.value)}
               maxLength={100}
             />
-          </label>
-          <label>
-            Deadline <span className="muted">(optional)</span>
-            <input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
-          </label>
-          <label>
-            Status
-            <select value={status} onChange={(e) => setStatus(e.target.value as Status)}>
+          </div>
+          <div className="field">
+            <label htmlFor="task-deadline">Due <span className="muted">(optional)</span></label>
+            <input id="task-deadline" type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
+          </div>
+          <div className="field">
+            <label htmlFor="task-status">Status</label>
+            <select id="task-status" value={status} onChange={(e) => setStatus(e.target.value as Status)}>
               {STATUSES.map((s) => (
-                <option key={s} value={s}>{s}</option>
+                <option key={s} value={s}>{STATUS_LABELS[s]}</option>
               ))}
             </select>
-          </label>
+          </div>
+          <button type="submit" className="btn btn-primary" disabled={saving} data-testid="core-submit">
+            {saving ? "Adding…" : "Add task"}
+          </button>
         </div>
         {error && <p className="error" role="alert">{error}</p>}
-        <button type="submit" className="btn btn-primary" disabled={saving} data-testid="core-submit">
-          {saving ? "Adding…" : "Add task"}
-        </button>
       </form>
 
       {tasks.length === 0 ? (
-        <p className="muted center empty">No tasks yet. Add the first one above.</p>
+        <p className="muted empty">Nothing on the sheet yet. Add the first task above and put a name on it.</p>
       ) : (
-        <ul className="tasks">
-          {tasks.map((t) => (
-            <li key={t.id} className={`card task status-${t.status}`} data-testid="core-item">
-              <div className="task-main">
-                <span className="task-title">{t.title}</span>
-                <span className="task-meta">
+        <>
+          <div className="sheet-head" aria-hidden="true">
+            <span>Task</span>
+            <span>Owner</span>
+            <span>Due</span>
+            <span>Status</span>
+            <span />
+          </div>
+          <ul className="sheet sheet-app">
+            {tasks.map((t) => (
+              <li key={t.id} className={`sheet-row status-${t.status}`} data-testid="core-item">
+                <span className="cell-title">{t.title}</span>
+                <span className={`cell-owner${t.assignee ? "" : " muted"}`}>
+                  <span className="cell-label">Owner </span>
                   {t.assignee ? t.assignee : "Unassigned"}
-                  {" · "}
-                  {t.deadline ? `Due ${formatDate(t.deadline)}` : "No deadline"}
                 </span>
-              </div>
-              <div className="task-actions">
-                <select
-                  aria-label={`Status of ${t.title}`}
-                  value={t.status}
-                  onChange={(e) => changeStatus(t.id, e.target.value as Status)}
-                >
-                  {STATUSES.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => removeTask(t.id)}
-                  aria-label={`Delete ${t.title}`}
-                >
-                  Delete
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
+                <span className={`cell-due${t.deadline ? "" : " muted"}`}>
+                  <span className="cell-label">Due </span>
+                  {t.deadline ? formatDate(t.deadline) : "No date"}
+                </span>
+                <span className="cell-status">
+                  <span className="dot" aria-hidden="true" />
+                  <select
+                    aria-label={`Status of ${t.title}`}
+                    value={t.status}
+                    onChange={(e) => changeStatus(t.id, e.target.value as Status)}
+                  >
+                    {STATUSES.map((s) => (
+                      <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+                    ))}
+                  </select>
+                </span>
+                <span className="cell-actions">
+                  <button
+                    type="button"
+                    className="text-button quiet"
+                    onClick={() => removeTask(t.id)}
+                    aria-label={`Delete ${t.title}`}
+                  >
+                    Delete
+                  </button>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </>
   );
@@ -163,5 +180,7 @@ export default function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
 
 function formatDate(iso: string) {
   const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+  const date = new Date(y, m - 1, d);
+  const sameYear = y === new Date().getFullYear();
+  return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", ...(sameYear ? {} : { year: "numeric" }) });
 }

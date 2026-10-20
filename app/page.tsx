@@ -1,29 +1,56 @@
 import Link from "next/link";
 
+const EXAMPLE = [
+  { title: "Write literature review", owner: "Marta", due: "14 Nov", status: "accepted" },
+  { title: "Run the customer survey", owner: "Jonas", due: "18 Nov", status: "proposed" },
+  { title: "Build financial model", owner: "Aisha", due: "21 Nov", status: "accepted" },
+  { title: "Book room for final rehearsal", owner: "Leo", due: "9 Nov", status: "done" },
+] as const;
+
 export default function Home() {
   return (
-    <main className="container hero">
-      <p className="eyebrow">For university project teams</p>
-      <h1>Group project tasks, with names and deadlines.</h1>
-      <p className="lead">So when something isn&apos;t done, nobody has to guess whose it was.</p>
-      <Link href="/signup" className="btn btn-primary btn-lg">
-        Sign up
-      </Link>
+    <main className="container wide landing">
+      <section className="landing-intro">
+        <p className="eyebrow">For university project teams</p>
+        <h1 className="display">Group project tasks, with names and deadlines.</h1>
+        <p className="lead">So when something isn&apos;t done, nobody has to guess whose it was.</p>
+        <div className="cta">
+          <Link href="/signup" className="btn btn-primary">
+            Sign up
+          </Link>
+          <span className="muted">
+            or <Link href="/login" className="text-link">log in</Link>
+          </span>
+        </div>
+      </section>
 
-      <ul className="features">
-        <li>
-          <strong>Split the work</strong>
-          <span>Turn the assignment into small tasks.</span>
-        </li>
-        <li>
-          <strong>Put a name on it</strong>
-          <span>Every task gets an owner and a deadline.</span>
-        </li>
-        <li>
-          <strong>See what&apos;s next</strong>
-          <span>Proposed, accepted, done — at a glance.</span>
-        </li>
-      </ul>
+      <figure className="landing-sheet">
+        <figcaption className="sheet-caption">
+          <span>Marketing 301 · Final project</span>
+          <span className="muted">Example</span>
+        </figcaption>
+        <div className="sheet-head" aria-hidden="true">
+          <span>Task</span>
+          <span>Owner</span>
+          <span>Due</span>
+          <span>Status</span>
+        </div>
+        <ul className="sheet">
+          {EXAMPLE.map((t) => (
+            <li key={t.title} className={`sheet-row status-${t.status}`}>
+              <span className="cell-title">{t.title}</span>
+              <span className="cell-owner"><span className="cell-label">Owner </span>{t.owner}</span>
+              <span className="cell-due"><span className="cell-label">Due </span>{t.due}</span>
+              <span className="cell-status"><span className="dot" aria-hidden="true" />{t.status}</span>
+            </li>
+          ))}
+        </ul>
+      </figure>
+
+      <p className="how">
+        <strong>How it works.</strong> Write each task down, put one name and a date next to it, and
+        move it from proposed to accepted to done as the work happens.
+      </p>
     </main>
   );
 }

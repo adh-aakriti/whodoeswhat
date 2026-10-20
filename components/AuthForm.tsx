@@ -39,10 +39,14 @@ export default function AuthForm({ mode }: { mode: Mode }) {
   return (
     <main className="container narrow">
       <h1>{isSignup ? "Create your account" : "Log in"}</h1>
-      <form className="card form" onSubmit={onSubmit}>
-        <label>
-          Email
+      <p className="muted intro">
+        {isSignup ? "An email and a password is all it takes." : "Welcome back. Your task sheet is where you left it."}
+      </p>
+      <form className="form" onSubmit={onSubmit}>
+        <div className="field">
+          <label htmlFor={`${mode}-email`}>Email</label>
           <input
+            id={`${mode}-email`}
             type="email"
             autoComplete="email"
             required
@@ -50,29 +54,32 @@ export default function AuthForm({ mode }: { mode: Mode }) {
             onChange={(e) => setEmail(e.target.value)}
             data-testid={`${mode}-email`}
           />
-        </label>
-        <label>
-          Password
+        </div>
+        <div className="field">
+          <label htmlFor={`${mode}-password`}>Password</label>
           <input
+            id={`${mode}-password`}
             type="password"
             autoComplete={isSignup ? "new-password" : "current-password"}
             required
             minLength={6}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            aria-describedby={`${mode}-password-hint`}
             data-testid={`${mode}-password`}
           />
-        </label>
+          <p id={`${mode}-password-hint`} className="hint">At least 6 characters.</p>
+        </div>
         {error && <p className="error" role="alert">{error}</p>}
         <button type="submit" className="btn btn-primary" disabled={loading} data-testid={`${mode}-submit`}>
           {loading ? "Please wait…" : isSignup ? "Sign up" : "Log in"}
         </button>
       </form>
-      <p className="muted center">
+      <p className="muted switch">
         {isSignup ? (
-          <>Already have an account? <Link href="/login">Log in</Link></>
+          <>Already have an account? <Link href="/login" className="text-link">Log in</Link></>
         ) : (
-          <>New here? <Link href="/signup">Sign up</Link></>
+          <>New here? <Link href="/signup" className="text-link">Sign up</Link></>
         )}
       </p>
     </main>

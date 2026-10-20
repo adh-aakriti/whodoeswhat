@@ -9,7 +9,7 @@ export default function LogoutButton() {
   }
 
   return (
-    <button type="button" className="btn btn-ghost" data-testid="logout" onClick={logout}>
+    <button type="button" className="text-button" data-testid="logout" onClick={logout}>
       Log out
     </button>
   );

@@ -17,7 +17,7 @@ export default async function AppPage() {
     .order("created_at", { ascending: false });
 
   return (
-    <main className="container">
+    <main className="container app-page">
       <h1>Your tasks</h1>
       <TaskBoard initialTasks={(data ?? []) as Task[]} />
     </main>

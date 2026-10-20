@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Status, Task } from "@/components/TaskBoard";
 import { ChevronIcon, StatusIcon } from "@/components/Icons";
 import Avatar from "@/components/Avatar";
+import { projectTone } from "@/lib/projectTone";
 
 // Dates are handled as plain "YYYY-MM-DD" keys built from local calendar parts,
 // so a deadline is never shifted by the browser's timezone.
@@ -229,12 +230,15 @@ function CalendarTaskList({ tasks, today, statusLabels }: { tasks: Task[]; today
   return (
     <ul className="cal-tasks">
       {tasks.map((t) => (
-        <li key={t.id} className={`cal-task status-${t.status}`} data-calendar-task={t.id}>
+        <li key={t.id} className={`cal-task status-${t.status} tone-${projectTone(t.project)}`} data-calendar-task={t.id}>
           <span className="cal-task-title">
             {t.title}
             {isOverdue(t, today) && <span className="overdue-label">Overdue</span>}
           </span>
-          <span className="project-tag">{t.project}</span>
+          <span className="project-tag project-name">
+            <span className={`project-dot tone-${projectTone(t.project)}`} aria-hidden="true" />
+            {t.project}
+          </span>
           <span className="cal-task-meta">
             <span className={`cal-task-owner${t.assignee ? "" : " muted"}`}>
               {t.assignee && <Avatar name={t.assignee} />}

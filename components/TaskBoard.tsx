@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase-browser";
 import { CalendarIcon, ListIcon, PlusIcon, StatusIcon, TrashIcon } from "@/components/Icons";
 import Avatar from "@/components/Avatar";
 import TaskCalendar from "@/components/TaskCalendar";
+import { projectTone } from "@/lib/projectTone";
 
 export type Status = "proposed" | "accepted" | "done";
 
@@ -227,14 +228,17 @@ export default function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
           {visibleGroups.map((g, i) => (
             <section key={g.name} className="project-group" aria-labelledby={`project-group-${i}`}>
               <h2 id={`project-group-${i}`} className="project-heading">
-                {g.name}
+                <span className="project-name">
+                  <span className={`project-dot tone-${projectTone(g.name)}`} aria-hidden="true" />
+                  {g.name}
+                </span>
                 <span className="project-count">
                   {g.items.length} {g.items.length === 1 ? "task" : "tasks"}
                 </span>
               </h2>
               <ul className="sheet sheet-app">
                 {g.items.map((t) => (
-                  <li key={t.id} className={`sheet-row status-${t.status}`} data-testid="core-item">
+                  <li key={t.id} className={`sheet-row status-${t.status} tone-${projectTone(t.project)}`} data-testid="core-item">
                     <span className="cell-title">
                       {t.title}
                       <span className="project-tag">

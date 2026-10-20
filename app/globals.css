@@ -168,8 +168,18 @@ input:focus-visible, select:focus-visible { outline-offset: 0; border-color: var
   text-transform: uppercase;
   color: var(--accent);
 }
-.display { font-size: clamp(2.25rem, 8vw, 3.75rem); max-width: 14ch; margin-bottom: 1.25rem; }
-.lead { font-size: clamp(1.1rem, 3.5vw, 1.3rem); color: var(--muted); max-width: 34ch; margin: 0 0 2rem; }
+/* Same serif and ink as .brand in the top bar, at roughly 1.75x its size. */
+.hero-name {
+  margin: 0;
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: clamp(1.9rem, 7vw, 2.25rem);
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.tagline { margin: 0.4rem 0 2.5rem; font-size: clamp(1rem, 3.2vw, 1.125rem); color: var(--muted); max-width: 34ch; }
+.display { font-size: clamp(2.25rem, 8vw, 3.75rem); max-width: 14ch; margin-bottom: 2rem; }
 .cta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.25rem; }
 .landing-sheet { margin: 0; border-top: 2px solid var(--ink); }
 .sheet-caption {

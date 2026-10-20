@@ -12,7 +12,7 @@ const EXAMPLE = [
 
 export default function Home() {
   return (
-    <main className="container wide landing">
+    <main className="container landing">
       <Tagline />
       <section className="landing-intro">
         <p className="eyebrow">For university project teams</p>

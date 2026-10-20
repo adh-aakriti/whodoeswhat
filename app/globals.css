@@ -46,6 +46,8 @@
   --busy-border: #b3261e;   /* 4.9:1 on --busy-bg */
   --alert-text: #8a1c14;    /* 7.0:1 on --busy-bg, 8.2:1 on --light-bg */
   --radius: 4px;
+  --container: 1280px;
+  --gutter: 24px;           /* 48px from 900px, see the media query */
 }
 
 * { box-sizing: border-box; }
@@ -81,10 +83,11 @@ a { color: var(--accent); text-underline-offset: 3px; }
 /* ---------- Top bar ---------- */
 
 .topbar { border-bottom: 1px solid var(--rule); }
+/* Header content and page content share one container: same max-width, same side padding. */
 .topbar-inner {
-  max-width: 1080px;
+  max-width: var(--container);
   margin: 0 auto;
-  padding: 0 16px;
+  padding: 0 var(--gutter);
   min-height: 56px;
   display: flex;
   align-items: center;
@@ -105,9 +108,8 @@ a { color: var(--accent); text-underline-offset: 3px; }
 
 /* ---------- Layout ---------- */
 
-.container { max-width: 880px; margin: 0 auto; padding: 2.5rem 16px 5rem; }
-.container.wide { max-width: 1080px; }
-.container.narrow { max-width: 420px; }
+.container { max-width: var(--container); margin: 0 auto; padding: 2.5rem var(--gutter) 5rem; }
+.container.narrow { max-width: calc(388px + 2 * var(--gutter)); } /* same 388px form column as before */
 
 .muted { color: var(--muted); font-weight: 400; }
 .intro { margin: 0 0 2rem; }
@@ -203,10 +205,10 @@ input:focus-visible, select:focus-visible { outline-offset: 0; border-color: var
 
 /* On the landing page the shared top bar becomes the header row: large name left, Log in right. */
 body:has(.landing) .topbar { border-bottom: 0; }
-body:has(.landing) .topbar-inner { max-width: 1100px; min-height: 0; padding: 28px 24px 0; }
+body:has(.landing) .topbar-inner { min-height: 0; padding-top: 28px; }
 body:has(.landing) .brand { font-size: clamp(1.9rem, 7vw, 2.25rem); line-height: 1.1; }
 
-.container.landing { max-width: 1100px; padding: 0 24px 4rem; }
+.container.landing { padding-top: 0; padding-bottom: 4rem; }
 .landing {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -602,7 +604,7 @@ body:has(.landing) .brand { font-size: clamp(1.9rem, 7vw, 2.25rem); line-height:
   .filter { width: 14rem; }
   .list-controls { width: auto; }
   .cal-grid { gap: 6px; }
-  .cal-blank, .cal-day { min-height: 88px; }
+  .cal-blank, .cal-day { min-height: 72px; }
   .cal-day { align-items: flex-start; padding: 0.4rem 0.55rem; }
   .cal-count { font-size: 1.35rem; }
   .cal-tags { flex-direction: row; flex-wrap: wrap; gap: 0.15rem 0.4rem; margin-top: auto; }
@@ -635,7 +637,9 @@ body:has(.landing) .brand { font-size: clamp(1.9rem, 7vw, 2.25rem); line-height:
   }
   .sheet-row > * { grid-area: auto; }
   .task-form { padding: 1.25rem 1.5rem; }
-  .task-area { padding: 1.5rem; }
+  .board .board-head { padding: 1.5rem 1.5rem 0; }
+  .board .board-list,
+  .board .board-calendar { padding: 0 1.5rem 1.5rem; }
   /* Header columns line up with the card content (4px stripe + 1rem padding). */
   .app-page .sheet-head { padding-left: calc(1rem + 4px); padding-right: calc(1rem + 1px); border-bottom: 0; }
   .cell-actions { justify-self: end; }
@@ -654,8 +658,9 @@ body:has(.landing) .brand { font-size: clamp(1.9rem, 7vw, 2.25rem); line-height:
 @media (min-width: 900px) {
   .task-fields { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 0.95fr) auto; align-items: end; }
   .task-submit { grid-column: auto; width: auto; min-height: 44px; }
-  body:has(.landing) .topbar-inner { padding: 32px 48px 0; }
-  .container.landing { padding: 0 48px 5rem; }
+  :root { --gutter: 48px; }
+  body:has(.landing) .topbar-inner { padding-top: 32px; }
+  .container.landing { padding-bottom: 5rem; }
   .landing {
     grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
     column-gap: 4rem;
@@ -692,12 +697,19 @@ body:has(.app-page) .nav .text-button { color: #fff; text-decoration-color: rgb(
 body:has(.app-page) .nav .text-button:hover { text-decoration-color: #fff; }
 body:has(.app-page) .topbar :focus-visible { outline-color: #fff; }
 
-.task-area {
-  padding: 1rem 0.5rem 1.25rem;
-  background: var(--area);
-  border: 1px solid var(--rule);
-  border-radius: 6px;
-}
+/* The "Your tasks" head and the list (or calendar) below it read as one tinted panel. */
+.board-head,
+.board-list,
+.board-calendar { background: var(--area); border: 1px solid var(--rule); }
+.board-head { padding: 1rem 0.5rem 0; border-bottom: 0; border-radius: 6px 6px 0 0; }
+.board-list,
+.board-calendar { padding: 0 0.5rem 1.25rem; border-top: 0; border-radius: 0 0 6px 6px; }
+/* Below 1100px the toggle decides which one shows. */
+.board[data-view="list"] .board-calendar,
+.board[data-view="calendar"] .board-list { display: none; }
+/* Phones: a little less panel padding and gap so 7 day tiles stay >= 44px wide with room for labels. */
+.board-calendar { padding-left: 0.25rem; padding-right: 0.25rem; }
+.board-calendar .cal-grid { gap: 2px; }
 
 /* ---------- /app task cards ---------- */
 
@@ -739,6 +751,67 @@ body:has(.app-page) .topbar :focus-visible { outline-color: #fff; }
 .cal-task .cell-status .status-icon { color: var(--on-tint); }
 /* Keep the 44px tap target without making the tint 44px tall. */
 .sheet-app .cell-status select { margin: -6px 0; }
+
+/* ---------- /app two columns from 1100px ---------- */
+
+@media (min-width: 1100px) {
+  .board {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); /* ~60 / 40 */
+    grid-template-rows: auto auto 1fr;
+    grid-template-areas: "form cal" "head cal" "list cal";
+    column-gap: 2rem;
+    align-items: start;
+  }
+  .board-form { grid-area: form; }
+  .board-head { grid-area: head; }
+  .board[data-view] .board-list { grid-area: list; display: block; align-self: stretch; } /* beats the toggle's hide rule */
+  /* Calendar: its own panel, sticky while the list scrolls; scrolls inside if taller than the screen. */
+  .board[data-view] .board-calendar {
+    grid-area: cal;
+    display: block;
+    position: sticky;
+    top: 1.5rem;
+    max-height: calc(100vh - 3rem);
+    overflow-y: auto;
+    padding: 1.25rem;
+    border-top: 1px solid var(--rule);
+    border-radius: 6px;
+  }
+  .board-calendar .calendar { border-top: 0; padding-top: 0; }
+  .board .view-toggle { display: none; } /* both views are on screen */
+  .board-calendar .cal-undated .text-button { display: none; } /* the list is right next to it */
+
+  /* Left column is ~580-690px: fields 2 x 2 with a full-width Add task. */
+  .task-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .task-submit { grid-column: 1 / -1; width: 100%; min-height: 48px; }
+
+  /* Task rows: stacked card layout (the 5-column table needs more width than the column has). */
+  .app-page .sheet-head { display: none; }
+  .sheet-app .sheet-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "title title" "owner due" "status actions";
+    gap: 0.35rem 1rem;
+    min-height: 0;
+  }
+  .sheet-app .cell-title { grid-area: title; }
+  .sheet-app .cell-owner { grid-area: owner; }
+  .sheet-app .cell-due { grid-area: due; }
+  .sheet-app .cell-status { grid-area: status; }
+  .sheet-app .cell-actions { grid-area: actions; }
+  .sheet-app .cell-label { position: static; width: auto; height: auto; overflow: visible; clip: auto; white-space: normal; }
+  .sheet-app .project-tag .cell-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  /* Compact calendar tiles for the ~46-56px wide side column, 72px tall. */
+  .board-calendar .cal-grid { gap: 4px; }
+  .board-calendar .cal-blank,
+  .board-calendar .cal-day { min-height: 72px; }
+  .board-calendar .cal-day { align-items: center; padding: 0.3rem 0; }
+  .board-calendar .cal-count { font-size: 1.05rem; }
+  .board-calendar .cal-tags { flex-direction: column; align-items: center; gap: 0.05rem; margin-top: 0; }
+  .board-calendar .cal-tag { font-size: 0.6rem; text-transform: none; letter-spacing: -0.01em; }
+  .board-calendar .cal-head { flex-wrap: wrap; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }

@@ -120,8 +120,10 @@ export default function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
   }
 
   return (
-    <>
-      <form className="task-form" onSubmit={addTask}>
+    // One grid, each part rendered once. Below 1100px it is a single column and the List / Calendar
+    // toggle picks what shows; from 1100px the list and the calendar sit side by side (see .board CSS).
+    <div className="board" data-view={view}>
+      <form className="task-form board-form" onSubmit={addTask}>
         {/* Every field is always visible. Only the title is required; the others keep valid defaults. */}
         <div className="field">
           {/* The visible cue is the placeholder; this label keeps a real accessible name for screen readers. */}
@@ -192,7 +194,7 @@ export default function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
         {error && <p className="error" role="alert">{error}</p>}
       </form>
 
-      <section className="task-area">
+      <div className="board-head">
         <div className="list-head">
           <h1>Your tasks</h1>
           <div className="list-controls">
@@ -223,13 +225,9 @@ export default function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
             )}
           </div>
         </div>
-        {view === "calendar" ? (
-          <TaskCalendar
-            tasks={activeFilter === null ? tasks : tasks.filter((t) => t.project === activeFilter)}
-            statusLabels={STATUS_LABELS}
-            onShowList={() => setView("list")}
-          />
-        ) : tasks.length === 0 ? (
+      </div>
+      <div className="board-list">
+        {tasks.length === 0 ? (
           <p className="muted empty">Nothing on the sheet yet. Add the first task above and put a name on it.</p>
         ) : (
           <>
@@ -303,8 +301,18 @@ export default function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
             ))}
           </>
         )}
-      </section>
-    </>
+      </div>
+      {/* Client-only (needs the user's local "today"). Calendar rows never carry core-item. */}
+      {today && (
+        <div className="board-calendar">
+          <TaskCalendar
+            tasks={activeFilter === null ? tasks : tasks.filter((t) => t.project === activeFilter)}
+            statusLabels={STATUS_LABELS}
+            onShowList={() => setView("list")}
+          />
+        </div>
+      )}
+    </div>
   );
 }
 

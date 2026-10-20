@@ -10,9 +10,8 @@ const EXAMPLE = [
 export default function Home() {
   return (
     <main className="container wide landing">
+      <p className="tagline">No more &ldquo;I thought you were doing that.&rdquo;</p>
       <section className="landing-intro">
-        <p className="hero-name">WhoDoesWhat</p>
-        <p className="tagline">No more &ldquo;I thought you were doing that.&rdquo;</p>
         <p className="eyebrow">For university project teams</p>
         <h1 className="display">Group project tasks, with names and deadlines.</h1>
         <div className="cta">

@@ -214,6 +214,7 @@ input:focus-visible, select:focus-visible { outline-offset: 0; border-color: var
 .cell-status { grid-area: status; }
 .cell-actions { grid-area: actions; justify-self: end; }
 .cell-label { color: var(--muted); font-weight: 400; font-size: 0.875rem; }
+.project-tag .cell-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 .landing-sheet .sheet-row { grid-template-areas: "title title" "owner due" "status status"; }
 
@@ -257,7 +258,7 @@ input:focus-visible, select:focus-visible { outline-offset: 0; border-color: var
 
 /* ---------- /app ---------- */
 
-.app-page h1 { margin-bottom: 1.75rem; }
+.app-page h1 { margin-bottom: 1.25rem; }
 .task-form {
   display: flex;
   flex-direction: column;
@@ -266,17 +267,71 @@ input:focus-visible, select:focus-visible { outline-offset: 0; border-color: var
   margin-bottom: 2rem;
   border-bottom: 2px solid var(--ink);
 }
+.title-wrap { position: relative; }
+.title-plus {
+  position: absolute;
+  left: 0.9rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--accent);
+  pointer-events: none;
+}
 .input-title {
   font-family: var(--font-serif), Georgia, serif;
   font-size: 1.35rem;
   min-height: 56px;
-  padding: 0.5rem 0.85rem;
+  padding: 0.5rem 0.85rem 0.5rem 2.75rem;
 }
 .task-form .field label { font-weight: 600; }
+.title-row { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+.input-project { min-height: 56px; }
 .row { display: grid; grid-template-columns: 1fr; gap: 0.75rem; }
 .row .field label { font-weight: 500; color: var(--muted); }
 .row .field label .muted { font-size: 0.8rem; }
 .empty { margin: 0; font-size: 1.05rem; }
+
+.list-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+  margin-bottom: 1.25rem;
+}
+.app-page .list-head h1 { margin: 0; }
+.filter { width: 100%; }
+.filter label { font-weight: 500; color: var(--muted); }
+
+.project-group + .project-group { margin-top: 2rem; }
+.project-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0;
+  padding: 1rem 0 0.5rem;
+  border-bottom: 1px solid var(--rule-strong);
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: 1.25rem;
+  font-weight: 500;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.project-count {
+  flex-shrink: 0;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+.cell-title { display: flex; flex-direction: column; gap: 0.15rem; }
+.project-tag {
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
 
 /* ---------- Desktop ---------- */
 
@@ -287,6 +342,8 @@ input:focus-visible, select:focus-visible { outline-offset: 0; border-color: var
     grid-template-columns: 1.3fr 1fr 1fr auto;
     align-items: end;
   }
+  .title-row { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); align-items: end; }
+  .filter { width: 14rem; }
 
   .sheet-head {
     display: grid;

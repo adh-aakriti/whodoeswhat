@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 
 export type Status = "proposed" | "accepted" | "done";
@@ -11,12 +11,14 @@ export type Task = {
   assignee: string;
   deadline: string | null;
   status: Status;
+  project: string;
   created_at: string;
 };
 
 const STATUSES: Status[] = ["proposed", "accepted", "done"];
 const STATUS_LABELS: Record<Status, string> = { proposed: "Proposed", accepted: "Accepted", done: "Done" };
-const COLUMNS = "id, title, assignee, deadline, status, created_at";
+const COLUMNS = "id, title, assignee, deadline, status, project, created_at";
+const DEFAULT_PROJECT = "General";
 
 export default function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
@@ -24,9 +26,27 @@ export default function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
   const [assignee, setAssignee] = useState("");
   const [deadline, setDeadline] = useState("");
   const [status, setStatus] = useState<Status>("proposed");
+  // Kept after each add so several tasks can go into the same project quickly.
+  const [project, setProject] = useState("");
+  // null = "All projects".
+  const [filter, setFilter] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const supabase = createClient();
+
+  // Groups in order of their newest task, so a just-added task's project is on top.
+  const groups = useMemo(() => {
+    const byProject = new Map<string, Task[]>();
+    for (const t of tasks) {
+      const list = byProject.get(t.project);
+      if (list) list.push(t);
+      else byProject.set(t.project, [t]);
+    }
+    return [...byProject.entries()].map(([name, items]) => ({ name, items }));
+  }, [tasks]);
+  const projectNames = useMemo(() => groups.map((g) => g.name).sort((a, b) => a.localeCompare(b)), [groups]);
+  const activeFilter = filter !== null && projectNames.includes(filter) ? filter : null;
+  const visibleGroups = activeFilter === null ? groups : groups.filter((g) => g.name === activeFilter);
 
   async function addTask(e: React.FormEvent) {
     e.preventDefault();
@@ -41,6 +61,7 @@ export default function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
         assignee: assignee.trim(),
         deadline: deadline || null,
         status,
+        project: project.trim() || DEFAULT_PROJECT,
       })
       .select(COLUMNS)
       .single();
@@ -49,7 +70,9 @@ export default function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
       setError(error.message);
       return;
     }
-    setTasks((prev) => [data as Task, ...prev]);
+    const saved = data as Task;
+    setTasks((prev) => [saved, ...prev]);
+    if (activeFilter !== null && activeFilter !== saved.project) setFilter(null);
     setTitle("");
     setAssignee("");
     setDeadline("");
@@ -79,19 +102,44 @@ export default function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
   return (
     <>
       <form className="task-form" onSubmit={addTask}>
-        <div className="field">
-          <label htmlFor="task-title">New task</label>
-          <input
-            id="task-title"
-            className="input-title"
-            type="text"
-            placeholder="e.g. Write the introduction"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            maxLength={200}
-            required
-            data-testid="core-input"
-          />
+        <div className="title-row">
+          <div className="field">
+            <label htmlFor="task-title">Add a new task</label>
+            <div className="title-wrap">
+              <svg className="title-plus" width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                <path d="M10 3v14M3 10h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              <input
+                id="task-title"
+                className="input-title"
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                maxLength={200}
+                required
+                data-testid="core-input"
+              />
+            </div>
+          </div>
+          <div className="field">
+            <label htmlFor="task-project">Project <span className="muted">(optional)</span></label>
+            <input
+              id="task-project"
+              className="input-project"
+              type="text"
+              list="project-options"
+              placeholder={DEFAULT_PROJECT}
+              value={project}
+              onChange={(e) => setProject(e.target.value)}
+              maxLength={100}
+              autoComplete="off"
+            />
+            <datalist id="project-options">
+              {projectNames.map((name) => (
+                <option key={name} value={name} />
+              ))}
+            </datalist>
+          </div>
         </div>
         <div className="row">
           <div className="field">
@@ -124,6 +172,24 @@ export default function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
         {error && <p className="error" role="alert">{error}</p>}
       </form>
 
+      <div className="list-head">
+        <h1>Your tasks</h1>
+        {projectNames.length > 1 && (
+          <div className="field filter">
+            <label htmlFor="project-filter">Show</label>
+            <select
+              id="project-filter"
+              value={activeFilter ?? ""}
+              onChange={(e) => setFilter(e.target.value === "" ? null : e.target.value)}
+            >
+              <option value="">All projects</option>
+              {projectNames.map((name) => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
       {tasks.length === 0 ? (
         <p className="muted empty">Nothing on the sheet yet. Add the first task above and put a name on it.</p>
       ) : (
@@ -135,43 +201,59 @@ export default function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
             <span>Status</span>
             <span />
           </div>
-          <ul className="sheet sheet-app">
-            {tasks.map((t) => (
-              <li key={t.id} className={`sheet-row status-${t.status}`} data-testid="core-item">
-                <span className="cell-title">{t.title}</span>
-                <span className={`cell-owner${t.assignee ? "" : " muted"}`}>
-                  <span className="cell-label">Owner </span>
-                  {t.assignee ? t.assignee : "Unassigned"}
+          {visibleGroups.map((g, i) => (
+            <section key={g.name} className="project-group" aria-labelledby={`project-group-${i}`}>
+              <h2 id={`project-group-${i}`} className="project-heading">
+                {g.name}
+                <span className="project-count">
+                  {g.items.length} {g.items.length === 1 ? "task" : "tasks"}
                 </span>
-                <span className={`cell-due${t.deadline ? "" : " muted"}`}>
-                  <span className="cell-label">Due </span>
-                  {t.deadline ? formatDate(t.deadline) : "No date"}
-                </span>
-                <span className="cell-status">
-                  <span className="dot" aria-hidden="true" />
-                  <select
-                    aria-label={`Status of ${t.title}`}
-                    value={t.status}
-                    onChange={(e) => changeStatus(t.id, e.target.value as Status)}
-                  >
-                    {STATUSES.map((s) => (
-                      <option key={s} value={s}>{STATUS_LABELS[s]}</option>
-                    ))}
-                  </select>
-                </span>
-                <span className="cell-actions">
-                  <button
-                    type="button"
-                    className="text-button quiet"
-                    onClick={() => removeTask(t.id)}
-                    aria-label={`Delete ${t.title}`}
-                  >
-                    Delete
-                  </button>
-                </span>
-              </li>
-            ))}
-          </ul>
+              </h2>
+              <ul className="sheet sheet-app">
+                {g.items.map((t) => (
+                  <li key={t.id} className={`sheet-row status-${t.status}`} data-testid="core-item">
+                    <span className="cell-title">
+                      {t.title}
+                      <span className="project-tag">
+                        <span className="cell-label">Project </span>
+                        {t.project}
+                      </span>
+                    </span>
+                    <span className={`cell-owner${t.assignee ? "" : " muted"}`}>
+                      <span className="cell-label">Owner </span>
+                      {t.assignee ? t.assignee : "Unassigned"}
+                    </span>
+                    <span className={`cell-due${t.deadline ? "" : " muted"}`}>
+                      <span className="cell-label">Due </span>
+                      {t.deadline ? formatDate(t.deadline) : "No date"}
+                    </span>
+                    <span className="cell-status">
+                      <span className="dot" aria-hidden="true" />
+                      <select
+                        aria-label={`Status of ${t.title}`}
+                        value={t.status}
+                        onChange={(e) => changeStatus(t.id, e.target.value as Status)}
+                      >
+                        {STATUSES.map((s) => (
+                          <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+                        ))}
+                      </select>
+                    </span>
+                    <span className="cell-actions">
+                      <button
+                        type="button"
+                        className="text-button quiet"
+                        onClick={() => removeTask(t.id)}
+                        aria-label={`Delete ${t.title}`}
+                      >
+                        Delete
+                      </button>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
         </>
       )}
     </>

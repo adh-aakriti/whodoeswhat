@@ -3,7 +3,6 @@ import Link from "next/link";
 import { DM_Sans, Fraunces } from "next/font/google";
 import { createClient } from "@/lib/supabase-server";
 import LogoutButton from "@/components/LogoutButton";
-import { LogoMark } from "@/components/Icons";
 import "./globals.css";
 
 const serif = Fraunces({ subsets: ["latin"], variable: "--font-serif", display: "swap" });
@@ -33,7 +32,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <header className="topbar">
           <div className="topbar-inner">
             <Link href={user ? "/app" : "/"} className="brand">
-              <LogoMark />
               WhoDoesWhat
             </Link>
             <nav className="nav" aria-label="Account">

@@ -8,6 +8,7 @@
   --rule-strong: #8a8378;  /* input borders, 3.6:1 */
   --accent: #1f5a3d;       /* 7.9:1 */
   --accent-hover: #16432d;
+  --accent-highlight: rgb(31 90 61 / 0.17); /* on paper = #d5ddd5; accent text on it 5.85:1 */
   --error: #a3261b;        /* 6.6:1 */
   --dot-proposed: #8a8378;  /* status symbols, all >= 3.2:1 on paper and row hover */
   --dot-accepted: #b07a12;
@@ -197,7 +198,25 @@ body:has(.landing) .brand { font-size: clamp(1.9rem, 7vw, 2.25rem); line-height:
   color: var(--accent);
 }
 /* Tight to the name above, clear space below so it reads as a tagline. */
-.tagline { margin: 0.25rem 0 2.75rem; font-size: 0.95rem; line-height: 1.4; color: var(--muted); max-width: 34ch; }
+.tagline {
+  margin: 0.4rem 0 2.75rem;
+  font-family: var(--font-serif), Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.375rem; /* 22px; the headline below is 36px+ */
+  line-height: 1.45;
+  color: var(--accent);
+}
+/* Marker stroke behind the quoted words; "clone" keeps the rounded ends on every wrapped line. */
+.tagline-mark {
+  padding: 0.02em 0.22em;
+  border-radius: 0.3em;
+  background: var(--accent-highlight);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+.tagline-sm { margin: 0 0 1rem; font-size: 1.125rem; }
+@media (min-width: 600px) { .landing .tagline { font-size: 1.5rem; } }
 .display { font-size: clamp(2.25rem, 9vw, 2.75rem); max-width: 14ch; margin-bottom: 1.75rem; }
 .cta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.25rem; }
 .landing-sheet { margin: 3rem 0 0; border-top: 2px solid var(--ink); }
@@ -219,8 +238,6 @@ body:has(.landing) .brand { font-size: clamp(1.9rem, 7vw, 2.25rem); line-height:
 }
 .how strong { color: var(--ink); }
 .how-icon { color: var(--accent); vertical-align: -4px; margin-right: 0.4rem; }
-.brand { gap: 0.5rem; }
-.logo-mark { width: 1.25em; height: 1.25em; flex-shrink: 0; color: var(--accent); }
 
 /* ---------- Task sheet (landing example + /app) ---------- */
 
@@ -586,7 +603,7 @@ body:has(.landing) .brand { font-size: clamp(1.9rem, 7vw, 2.25rem); line-height:
     grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
     column-gap: 4rem;
   }
-  .tagline { grid-column: 1 / -1; font-size: 1rem; margin-bottom: 4rem; }
+  .landing .tagline { grid-column: 1 / -1; font-size: 1.875rem; margin-bottom: 3.5rem; } /* 30px vs 56-60px headline */
   .display { font-size: clamp(3.5rem, 4.2vw, 3.75rem); max-width: none; }
   .landing-sheet { margin-top: 0; }
   .how { grid-column: 1 / -1; margin-top: 4rem; }

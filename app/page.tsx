@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ListChecksIcon, StatusIcon } from "@/components/Icons";
 import Avatar from "@/components/Avatar";
+import Tagline from "@/components/Tagline";
 
 const EXAMPLE = [
   { title: "Write literature review", owner: "Marta", due: "14 Nov", status: "accepted" },
@@ -12,7 +13,7 @@ const EXAMPLE = [
 export default function Home() {
   return (
     <main className="container wide landing">
-      <p className="tagline">No more &ldquo;I thought you were doing that.&rdquo;</p>
+      <Tagline />
       <section className="landing-intro">
         <p className="eyebrow">For university project teams</p>
         <h1 className="display">Group project tasks, with names and deadlines.</h1>

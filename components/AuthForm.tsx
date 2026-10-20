@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase-browser";
+import Tagline from "@/components/Tagline";
 
 type Mode = "signup" | "login";
 
@@ -38,6 +39,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
 
   return (
     <main className="container narrow">
+      <Tagline small />
       <h1>{isSignup ? "Create your account" : "Log in"}</h1>
       <p className="muted intro">
         {isSignup ? "An email and a password is all it takes." : "Welcome back. Your task sheet is where you left it."}

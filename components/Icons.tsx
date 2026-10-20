@@ -56,31 +56,6 @@ export function StatusIcon({ status, ...props }: IconProps & { status: Status })
   );
 }
 
-// A person (the dot) standing on the short arm of a checkmark: someone owns it, it gets done.
-export function LogoMark({ size = 24, ...props }: IconProps) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-      focusable="false"
-      className="logo-mark"
-      {...props}
-    >
-      <circle cx="6.5" cy="6.5" r="3" fill="currentColor" />
-      <path
-        d="M3 14l5.5 5.5L21 6"
-        stroke="currentColor"
-        strokeWidth={3}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 export function ChevronIcon({ direction, ...props }: IconProps & { direction: "left" | "right" }) {
   return <Icon {...props}><path d={direction === "left" ? "M15 6l-6 6 6 6" : "M9 6l6 6-6 6"} /></Icon>;
 }

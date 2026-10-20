@@ -335,7 +335,7 @@ body:has(.landing) .brand { font-size: clamp(1.9rem, 7vw, 2.25rem); line-height:
 .task-form {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.85rem;
   padding: 1rem;
   margin-bottom: 2rem;
   background: var(--panel);
@@ -353,24 +353,17 @@ body:has(.landing) .brand { font-size: clamp(1.9rem, 7vw, 2.25rem); line-height:
 }
 .input-title {
   font-family: var(--font-serif), Georgia, serif;
-  font-size: 1.2rem; /* >= 16px, so iOS does not zoom */
-  min-height: 48px;
-  padding: 0.4rem 0.85rem 0.4rem 2.75rem;
+  font-size: 1.35rem; /* >= 16px, so iOS does not zoom */
+  min-height: 56px;
+  padding: 0.5rem 0.85rem 0.5rem 2.75rem;
 }
 .task-form .field label { font-weight: 600; }
 
-/* Slim row: title full width, Add task below it on phones and beside it from 720px. */
-.quick-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.5rem; }
-.quick-row .btn { min-height: 48px; }
-
-.options-toggle { align-self: flex-start; gap: 0.35rem; font-size: 0.95rem; color: var(--muted); }
-.options-chevron { transition: transform 150ms ease; }
-.options-toggle[aria-expanded="true"] .options-chevron { transform: rotate(180deg); }
-
-.options-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.75rem; padding-top: 0.25rem; }
-.options-grid[hidden] { display: none; } /* the class's display would otherwise beat the hidden attribute */
-.options-grid .field label { font-weight: 500; color: var(--muted); }
-.options-grid .field label .muted { font-size: 0.8rem; }
+/* Row 2: project, owner, deadline, status, then Add task. Stacked on phones, 2 columns on tablets, one row from 900px. */
+.task-fields { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.75rem; }
+.task-fields .field label { font-weight: 500; color: var(--muted); }
+.task-fields .field label .muted { font-size: 0.8rem; }
+.task-submit { width: 100%; min-height: 48px; }
 .empty { margin: 0; font-size: 1.05rem; }
 
 .list-head {
@@ -590,8 +583,8 @@ body:has(.landing) .brand { font-size: clamp(1.9rem, 7vw, 2.25rem); line-height:
 @media (min-width: 720px) {
   .container { padding-top: 3.5rem; }
 
-  .quick-row { grid-template-columns: minmax(0, 1fr) auto; }
-  .options-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .task-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .task-submit { grid-column: 1 / -1; }
   .filter { width: 14rem; }
   .list-controls { width: auto; }
   .cal-grid { gap: 6px; }
@@ -645,7 +638,8 @@ body:has(.landing) .brand { font-size: clamp(1.9rem, 7vw, 2.25rem); line-height:
 }
 
 @media (min-width: 900px) {
-  .options-grid { grid-template-columns: 1.2fr 1fr 1fr 1fr; }
+  .task-fields { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 0.95fr) auto; align-items: end; }
+  .task-submit { grid-column: auto; width: auto; min-height: 44px; }
   body:has(.landing) .topbar-inner { padding: 32px 48px 0; }
   .container.landing { padding: 0 48px 5rem; }
   .landing {

@@ -18,7 +18,7 @@ export default async function AppPage() {
 
   return (
     <main className="container">
-      <h1>Your team&apos;s tasks</h1>
+      <h1>Your tasks</h1>
       <TaskBoard initialTasks={(data ?? []) as Task[]} />
     </main>
   );

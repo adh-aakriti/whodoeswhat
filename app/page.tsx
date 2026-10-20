@@ -13,7 +13,7 @@ export default function Home() {
       <section className="landing-intro">
         <p className="eyebrow">For university project teams</p>
         <h1 className="display">Group project tasks, with names and deadlines.</h1>
-        <p className="lead">So when something isn&apos;t done, nobody has to guess whose it was.</p>
+        <p className="lead">No more &ldquo;I thought you were doing that.&rdquo;</p>
         <div className="cta">
           <Link href="/signup" className="btn btn-primary">
             Sign up

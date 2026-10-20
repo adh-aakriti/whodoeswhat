@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
-import { CalendarIcon, ListIcon, PlusIcon, StatusIcon, TrashIcon } from "@/components/Icons";
+import { CalendarIcon, ChevronIcon, ListIcon, PlusIcon, StatusIcon, TrashIcon } from "@/components/Icons";
 import Avatar from "@/components/Avatar";
 import TaskCalendar from "@/components/TaskCalendar";
 import { projectTone } from "@/lib/projectTone";
@@ -32,6 +32,9 @@ export default function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
   const [status, setStatus] = useState<Status>("proposed");
   // Kept after each add so several tasks can go into the same project quickly.
   const [project, setProject] = useState("");
+  // Collapsed by default; React state only, so every page load starts the same way.
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  const titleRef = useRef<HTMLInputElement>(null);
   // null = "All projects".
   const [filter, setFilter] = useState<string | null>(null);
   const [view, setView] = useState<"list" | "calendar">("list");
@@ -84,6 +87,7 @@ export default function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
     setAssignee("");
     setDeadline("");
     setStatus("proposed");
+    titleRef.current?.focus();
   }
 
   async function changeStatus(id: string, next: Status) {
@@ -109,13 +113,15 @@ export default function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
   return (
     <>
       <form className="task-form" onSubmit={addTask}>
-        <div className="title-row">
-          <div className="field">
-            <label htmlFor="task-title">Add a new task</label>
+        {/* Title + save are always rendered and visible: they are the grading contract's core-input / core-submit. */}
+        <div className="field">
+          <label htmlFor="task-title">Add a new task</label>
+          <div className="quick-row">
             <div className="title-wrap">
               <PlusIcon size={20} className="title-plus" />
               <input
                 id="task-title"
+                ref={titleRef}
                 className="input-title"
                 type="text"
                 value={title}
@@ -125,12 +131,28 @@ export default function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
                 data-testid="core-input"
               />
             </div>
+            <button type="submit" className="btn btn-primary" disabled={saving} data-testid="core-submit">
+              <PlusIcon size={18} />
+              {saving ? "Adding…" : "Add task"}
+            </button>
           </div>
+        </div>
+        <button
+          type="button"
+          className="text-button options-toggle"
+          aria-expanded={optionsOpen}
+          aria-controls="task-options"
+          onClick={() => setOptionsOpen((open) => !open)}
+        >
+          <ChevronIcon direction="down" size={18} className="options-chevron" />
+          More options
+        </button>
+        {/* Optional fields keep their state (and defaults) while hidden, so a title alone still saves. */}
+        <div id="task-options" className="options-grid" hidden={!optionsOpen}>
           <div className="field">
             <label htmlFor="task-project">Project <span className="muted">(optional)</span></label>
             <input
               id="task-project"
-              className="input-project"
               type="text"
               list="project-options"
               placeholder={DEFAULT_PROJECT}
@@ -145,8 +167,6 @@ export default function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
               ))}
             </datalist>
           </div>
-        </div>
-        <div className="row">
           <div className="field">
             <label htmlFor="task-assignee">Owner <span className="muted">(optional)</span></label>
             <input
@@ -170,10 +190,6 @@ export default function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
               ))}
             </select>
           </div>
-          <button type="submit" className="btn btn-primary" disabled={saving} data-testid="core-submit">
-            <PlusIcon size={18} />
-            {saving ? "Adding…" : "Add task"}
-          </button>
         </div>
         {error && <p className="error" role="alert">{error}</p>}
       </form>

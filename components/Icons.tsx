@@ -56,8 +56,10 @@ export function StatusIcon({ status, ...props }: IconProps & { status: Status })
   );
 }
 
-export function ChevronIcon({ direction, ...props }: IconProps & { direction: "left" | "right" }) {
-  return <Icon {...props}><path d={direction === "left" ? "M15 6l-6 6 6 6" : "M9 6l6 6-6 6"} /></Icon>;
+const CHEVRONS = { left: "M15 6l-6 6 6 6", right: "M9 6l6 6-6 6", down: "M6 9l6 6 6-6" } as const;
+
+export function ChevronIcon({ direction, ...props }: IconProps & { direction: keyof typeof CHEVRONS }) {
+  return <Icon {...props}><path d={CHEVRONS[direction]} /></Icon>;
 }
 
 export function ListIcon(props: IconProps) {

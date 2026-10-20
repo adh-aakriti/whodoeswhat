@@ -1,11 +1,14 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import { CalendarIcon, ChevronIcon, ListIcon, PlusIcon, StatusIcon, TrashIcon } from "@/components/Icons";
 import Avatar from "@/components/Avatar";
 import TaskCalendar from "@/components/TaskCalendar";
 import { projectTone } from "@/lib/projectTone";
+import { todayKey } from "@/lib/dates";
+import DueChip from "@/components/DueChip";
+import TaskCount from "@/components/TaskCount";
 
 export type Status = "proposed" | "accepted" | "done";
 
@@ -35,6 +38,14 @@ export default function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
   // Collapsed by default; React state only, so every page load starts the same way.
   const [optionsOpen, setOptionsOpen] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
+  // The user's local date, known only in the browser (the server may be in another timezone),
+  // so "due in N days" chips appear after hydration.
+  const [today, setToday] = useState<string | null>(null);
+  useEffect(() => {
+    setToday(todayKey());
+    const id = setInterval(() => setToday(todayKey()), 60_000);
+    return () => clearInterval(id);
+  }, []);
   // null = "All projects".
   const [filter, setFilter] = useState<string | null>(null);
   const [view, setView] = useState<"list" | "calendar">("list");
@@ -194,113 +205,118 @@ export default function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
         {error && <p className="error" role="alert">{error}</p>}
       </form>
 
-      <div className="list-head">
-        <h1>Your tasks</h1>
-        <div className="list-controls">
-          <div className="view-toggle" role="group" aria-label="View">
-            <button type="button" aria-pressed={view === "list"} onClick={() => setView("list")}>
-              <ListIcon />
-              List
-            </button>
-            <button type="button" aria-pressed={view === "calendar"} onClick={() => setView("calendar")}>
-              <CalendarIcon />
-              Calendar
-            </button>
-          </div>
-          {projectNames.length > 1 && (
-            <div className="field filter">
-              <label htmlFor="project-filter">Show</label>
-              <select
-                id="project-filter"
-                value={activeFilter ?? ""}
-                onChange={(e) => setFilter(e.target.value === "" ? null : e.target.value)}
-              >
-                <option value="">All projects</option>
-                {projectNames.map((name) => (
-                  <option key={name} value={name}>{name}</option>
-                ))}
-              </select>
+      <section className="task-area">
+        <div className="list-head">
+          <h1>Your tasks</h1>
+          <div className="list-controls">
+            <div className="view-toggle" role="group" aria-label="View">
+              <button type="button" aria-pressed={view === "list"} onClick={() => setView("list")}>
+                <ListIcon />
+                List
+              </button>
+              <button type="button" aria-pressed={view === "calendar"} onClick={() => setView("calendar")}>
+                <CalendarIcon />
+                Calendar
+              </button>
             </div>
-          )}
-        </div>
-      </div>
-      {view === "calendar" ? (
-        <TaskCalendar
-          tasks={activeFilter === null ? tasks : tasks.filter((t) => t.project === activeFilter)}
-          statusLabels={STATUS_LABELS}
-          onShowList={() => setView("list")}
-        />
-      ) : tasks.length === 0 ? (
-        <p className="muted empty">Nothing on the sheet yet. Add the first task above and put a name on it.</p>
-      ) : (
-        <>
-          <div className="sheet-head" aria-hidden="true">
-            <span>Task</span>
-            <span>Owner</span>
-            <span>Due</span>
-            <span>Status</span>
-            <span />
+            {projectNames.length > 1 && (
+              <div className="field filter">
+                <label htmlFor="project-filter">Show</label>
+                <select
+                  id="project-filter"
+                  value={activeFilter ?? ""}
+                  onChange={(e) => setFilter(e.target.value === "" ? null : e.target.value)}
+                >
+                  <option value="">All projects</option>
+                  {projectNames.map((name) => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
-          {visibleGroups.map((g, i) => (
-            <section key={g.name} className="project-group" aria-labelledby={`project-group-${i}`}>
-              <h2 id={`project-group-${i}`} className="project-heading">
-                <span className="project-name">
-                  <span className={`project-dot tone-${projectTone(g.name)}`} aria-hidden="true" />
-                  {g.name}
-                </span>
-                <span className="project-count">
-                  {g.items.length} {g.items.length === 1 ? "task" : "tasks"}
-                </span>
-              </h2>
-              <ul className="sheet sheet-app">
-                {g.items.map((t) => (
-                  <li key={t.id} className={`sheet-row status-${t.status} tone-${projectTone(t.project)}`} data-testid="core-item">
-                    <span className="cell-title">
-                      {t.title}
-                      <span className="project-tag">
-                        <span className="cell-label">Project </span>
-                        {t.project}
+        </div>
+        {view === "calendar" ? (
+          <TaskCalendar
+            tasks={activeFilter === null ? tasks : tasks.filter((t) => t.project === activeFilter)}
+            statusLabels={STATUS_LABELS}
+            onShowList={() => setView("list")}
+          />
+        ) : tasks.length === 0 ? (
+          <p className="muted empty">Nothing on the sheet yet. Add the first task above and put a name on it.</p>
+        ) : (
+          <>
+            <div className="sheet-head" aria-hidden="true">
+              <span>Task</span>
+              <span>Owner</span>
+              <span>Due</span>
+              <span>Status</span>
+              <span />
+            </div>
+            {visibleGroups.map((g, i) => (
+              <section key={g.name} className="project-group" aria-labelledby={`project-group-${i}`}>
+                <h2 id={`project-group-${i}`} className="project-heading">
+                  <span className="project-name">
+                    <span className={`project-dot tone-${projectTone(g.name)}`} aria-hidden="true" />
+                    {g.name}
+                  </span>
+                  <span className="project-count">
+                    <TaskCount n={g.items.length} />
+                  </span>
+                </h2>
+                <ul className="sheet sheet-app">
+                  {g.items.map((t) => (
+                    <li key={t.id} className={`sheet-row status-${t.status} tone-${projectTone(t.project)}`} data-testid="core-item">
+                      <span className="cell-title">
+                        {t.title}
+                        <span className="title-meta">
+                          <span className="project-tag">
+                            <span className="cell-label">Project </span>
+                            {t.project}
+                          </span>
+                          <DueChip deadline={t.deadline} status={t.status} today={today} />
+                        </span>
                       </span>
-                    </span>
-                    <span className={`cell-owner${t.assignee ? "" : " muted"}`}>
-                      <span className="cell-label">Owner </span>
-                      {t.assignee && <Avatar name={t.assignee} />}
-                      {t.assignee ? t.assignee : "Unassigned"}
-                    </span>
-                    <span className={`cell-due${t.deadline ? "" : " muted"}`}>
-                      <span className="cell-label">Due </span>
-                      {t.deadline ? formatDate(t.deadline) : "No date"}
-                    </span>
-                    <span className="cell-status">
-                      <StatusIcon status={t.status} />
-                      <select
-                        aria-label={`Status of ${t.title}`}
-                        value={t.status}
-                        onChange={(e) => changeStatus(t.id, e.target.value as Status)}
-                      >
-                        {STATUSES.map((s) => (
-                          <option key={s} value={s}>{STATUS_LABELS[s]}</option>
-                        ))}
-                      </select>
-                    </span>
-                    <span className="cell-actions">
-                      <button
-                        type="button"
-                        className="text-button quiet"
-                        onClick={() => removeTask(t.id)}
-                        aria-label={`Delete ${t.title}`}
-                      >
-                        <TrashIcon />
-                        Delete
-                      </button>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
-        </>
-      )}
+                      <span className={`cell-owner${t.assignee ? "" : " muted"}`}>
+                        <span className="cell-label">Owner </span>
+                        {t.assignee && <Avatar name={t.assignee} />}
+                        {t.assignee ? t.assignee : "Unassigned"}
+                      </span>
+                      <span className={`cell-due${t.deadline ? "" : " muted"}`}>
+                        <span className="cell-label">Due </span>
+                        {t.deadline ? formatDate(t.deadline) : "No date"}
+                      </span>
+                      <span className="cell-status">
+                        <StatusIcon status={t.status} />
+                        <select
+                          aria-label={`Status of ${t.title}`}
+                          value={t.status}
+                          onChange={(e) => changeStatus(t.id, e.target.value as Status)}
+                        >
+                          {STATUSES.map((s) => (
+                            <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+                          ))}
+                        </select>
+                      </span>
+                      <span className="cell-actions">
+                        <button
+                          type="button"
+                          className="text-button quiet"
+                          onClick={() => removeTask(t.id)}
+                          aria-label={`Delete ${t.title}`}
+                        >
+                          <TrashIcon />
+                          Delete
+                        </button>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </>
+        )}
+      </section>
     </>
   );
 }

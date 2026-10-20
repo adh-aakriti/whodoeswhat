@@ -35,6 +35,16 @@
   --on-tint-proposed: #6b655c;
   --on-tint-accepted: #8a5d0b;
   --on-tint-done: #2b6a45;
+
+  /* Livelier /app: deep green band, sage task area, yellow/red load states. */
+  --accent-deep: #16432d;   /* white on it 11.2:1 */
+  --area: #edf1ea;          /* muted 6.3:1, card border 3.1:1 */
+  --light-bg: #fff1b8;      /* 1-2 tasks / due soon; ink 15.4:1 */
+  --light-border: #946300;  /* 4.6:1 on --light-bg */
+  --light-text: #6b4a00;    /* 7.1:1 on --light-bg */
+  --busy-bg: #ffd6d1;       /* 3+ tasks / overdue; ink 13.1:1 */
+  --busy-border: #b3261e;   /* 4.9:1 on --busy-bg */
+  --alert-text: #8a1c14;    /* 7.0:1 on --busy-bg, 8.2:1 on --light-bg */
   --radius: 4px;
 }
 
@@ -433,43 +443,50 @@ body:has(.landing) .brand { font-size: clamp(1.9rem, 7vw, 2.25rem); line-height:
   text-transform: uppercase;
   color: var(--muted);
 }
-.cal-grid { border-top: 1px solid var(--rule); border-left: 1px solid var(--rule); }
-.cal-blank, .cal-day { border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); min-height: 48px; }
+.cal-grid { gap: 3px; }
+.cal-blank { min-height: 64px; }
 .cal-day {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 0.1rem;
   min-width: 0;
-  padding: 0.25rem 0;
-  border-top: 0;
-  border-left: 0;
-  background: transparent;
+  min-height: 64px;
+  padding: 0.3rem 0;
+  border: 2px solid var(--card-border);
+  border-radius: 4px;
+  background: var(--card);
   font: inherit;
   color: var(--ink);
   cursor: pointer;
-  transition: background-color 150ms ease;
+  transition: border-color 150ms ease;
 }
-.cal-day:hover { background: var(--paper-shade); }
-.cal-day:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; z-index: 1; }
-.cal-num { font-size: 0.95rem; font-variant-numeric: tabular-nums; line-height: 1.2; }
-.cal-day.is-today .cal-num { font-weight: 700; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
-.cal-day.is-selected { background: var(--ink); color: var(--paper); }
-.cal-day.is-selected .cal-num { color: var(--paper); }
-.cal-count {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.2rem;
-  font-size: 0.7rem;
-  font-weight: 600;
-  line-height: 1;
-  color: var(--accent);
-}
-.cal-marker { width: 5px; height: 5px; background: currentColor; }
-.cal-count.has-overdue { color: var(--error); }
-.cal-day.is-selected .cal-count { color: var(--paper); }
+.cal-day:hover { border-color: var(--ink); }
+.cal-num { font-size: 0.9rem; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.cal-count { font-size: 1.05rem; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.cal-tags { display: flex; flex-direction: column; align-items: center; gap: 0.05rem; }
+.cal-tag { font-size: 0.6rem; font-weight: 700; line-height: 1.15; letter-spacing: -0.01em; }
+.tag-today { color: var(--accent); }
+.tag-busy, .tag-overdue { color: var(--alert-text); }
+
+/* Load: yellow for 1-2 tasks, red for 3+. The bold count and "Busy" say the same in words. */
+.cal-day.load-light { background: var(--light-bg); border-color: var(--light-border); }
+.cal-day.load-busy { background: var(--busy-bg); border-color: var(--busy-border); }
+.cal-day.is-overdue { border-style: dashed; border-color: var(--busy-border); }
+/* Today: bold green outline in the gap. Selected: thick solid green border. */
+.cal-day.is-today { outline: 2px solid var(--accent); outline-offset: 1px; z-index: 1; }
+.cal-day.is-today .cal-num { font-weight: 700; }
+.cal-day.is-selected { border: 3px solid var(--accent); }
+.cal-day:focus-visible { outline: 3px solid var(--ink); outline-offset: 1px; z-index: 2; }
+
+.cal-legend { display: flex; flex-wrap: wrap; gap: 0.35rem 1.25rem; margin: 0 0 0.85rem; padding: 0; list-style: none; font-size: 0.875rem; color: var(--muted); }
+.cal-legend li { display: inline-flex; align-items: center; gap: 0.4rem; }
+.swatch { display: inline-block; width: 16px; height: 16px; border: 2px solid; border-radius: 3px; }
+.swatch-light { background: var(--light-bg); border-color: var(--light-border); }
+.swatch-busy { background: var(--busy-bg); border-color: var(--busy-border); }
+.swatch-overdue { background: var(--card); border-color: var(--busy-border); border-style: dashed; }
 
 .cal-day-panel, .cal-undated { margin-top: 1.5rem; }
 .cal-panel-title {
@@ -491,7 +508,7 @@ body:has(.landing) .brand { font-size: clamp(1.9rem, 7vw, 2.25rem); line-height:
   flex-direction: column;
   gap: 0.35rem;
   padding: 0.85rem 1rem;
-  background: var(--card);
+  background: color-mix(in srgb, var(--tone, var(--card)) 7%, var(--card));
   border: 1px solid var(--card-border);
   border-left: 4px solid var(--tone, var(--card-border));
   border-radius: 6px;
@@ -538,6 +555,28 @@ body:has(.landing) .brand { font-size: clamp(1.9rem, 7vw, 2.25rem); line-height:
   color: var(--muted);
 }
 .cell-title { display: flex; flex-direction: column; gap: 0.15rem; }
+.title-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.6rem; }
+
+/* Key numbers: bigger and bolder than the words around them. */
+.count-num { font-size: 1.3em; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.project-heading .project-count { font-size: 1rem; }
+
+.due-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  padding: 0.05rem 0.45rem;
+  border: 1px solid var(--card-border);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.due-chip strong { font-size: 1.1em; font-weight: 700; }
+.due-soon { background: var(--light-bg); border-color: var(--light-border); color: var(--light-text); }
+.due-overdue { background: var(--busy-bg); border-color: var(--busy-border); color: var(--alert-text); }
 .project-tag {
   font-size: 0.8rem;
   font-weight: 500;
@@ -555,9 +594,12 @@ body:has(.landing) .brand { font-size: clamp(1.9rem, 7vw, 2.25rem); line-height:
   .options-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .filter { width: 14rem; }
   .list-controls { width: auto; }
-  .cal-blank, .cal-day { min-height: 72px; }
-  .cal-day { align-items: flex-start; justify-content: space-between; padding: 0.4rem 0.5rem; }
-  .cal-count { font-size: 0.75rem; }
+  .cal-grid { gap: 6px; }
+  .cal-blank, .cal-day { min-height: 88px; }
+  .cal-day { align-items: flex-start; padding: 0.4rem 0.55rem; }
+  .cal-count { font-size: 1.35rem; }
+  .cal-tags { flex-direction: row; flex-wrap: wrap; gap: 0.15rem 0.4rem; margin-top: auto; }
+  .cal-tag { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; }
 
   .sheet-head {
     display: grid;
@@ -586,6 +628,7 @@ body:has(.landing) .brand { font-size: clamp(1.9rem, 7vw, 2.25rem); line-height:
   }
   .sheet-row > * { grid-area: auto; }
   .task-form { padding: 1.25rem 1.5rem; }
+  .task-area { padding: 1.5rem; }
   /* Header columns line up with the card content (4px stripe + 1rem padding). */
   .app-page .sheet-head { padding-left: calc(1rem + 4px); padding-right: calc(1rem + 1px); border-bottom: 0; }
   .cell-actions { justify-self: end; }
@@ -633,6 +676,21 @@ body:has(.landing) .brand { font-size: clamp(1.9rem, 7vw, 2.25rem); line-height:
   .landing-sheet .cell-label { position: static; width: auto; height: auto; overflow: visible; clip: auto; }
 }
 
+/* ---------- /app header band + task area ---------- */
+
+body:has(.app-page) .topbar { background: var(--accent-deep); border-bottom-color: var(--accent-deep); }
+body:has(.app-page) .brand { color: #fff; }
+body:has(.app-page) .nav .text-button { color: #fff; text-decoration-color: rgb(255 255 255 / 0.6); }
+body:has(.app-page) .nav .text-button:hover { text-decoration-color: #fff; }
+body:has(.app-page) .topbar :focus-visible { outline-color: #fff; }
+
+.task-area {
+  padding: 1rem 0.5rem 1.25rem;
+  background: var(--area);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+}
+
 /* ---------- /app task cards ---------- */
 
 .tone-1 { --tone: var(--project-1); }
@@ -647,7 +705,7 @@ body:has(.landing) .brand { font-size: clamp(1.9rem, 7vw, 2.25rem); line-height:
 .sheet-app { display: flex; flex-direction: column; gap: 0.75rem; padding-top: 0.75rem; }
 .sheet-app .sheet-row {
   padding: 0.85rem 1rem;
-  background: var(--card);
+  background: color-mix(in srgb, var(--tone, var(--card)) 7%, var(--card)); /* very light wash of the project colour */
   border: 1px solid var(--card-border);
   border-left: 4px solid var(--tone, var(--card-border));
   border-radius: 6px;

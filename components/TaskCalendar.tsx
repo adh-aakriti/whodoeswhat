@@ -5,6 +5,8 @@ import type { Status, Task } from "@/components/TaskBoard";
 import { ChevronIcon, StatusIcon } from "@/components/Icons";
 import Avatar from "@/components/Avatar";
 import { projectTone } from "@/lib/projectTone";
+import { toKey, todayKey } from "@/lib/dates";
+import TaskCount from "@/components/TaskCount";
 
 // Dates are handled as plain "YYYY-MM-DD" keys built from local calendar parts,
 // so a deadline is never shifted by the browser's timezone.
@@ -15,16 +17,9 @@ const WEEKDAYS = [
   ["Fri", "Friday"], ["Sat", "Saturday"], ["Sun", "Sunday"],
 ] as const;
 
-function toKey(year: number, month: number, day: number) {
-  return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-}
 function parseKey(key: string) {
   const [y, m, d] = key.split("-").map(Number);
   return { year: y, month: m - 1, day: d };
-}
-function todayKey() {
-  const now = new Date();
-  return toKey(now.getFullYear(), now.getMonth(), now.getDate());
 }
 // Local-midnight Date from a key; used only for formatting and day arithmetic.
 function keyToDate(key: string) {
@@ -46,6 +41,7 @@ function daysIn({ year, month }: Month) {
 function isOverdue(task: Task, today: string) {
   return task.deadline !== null && task.deadline < today && task.status !== "done";
 }
+const BUSY_FROM = 3; // 3+ tasks on one day = busy (red); 1-2 = light (yellow)
 const tasksLabel = (n: number) => (n === 0 ? "no tasks" : n === 1 ? "1 task" : `${n} tasks`);
 
 export default function TaskCalendar({
@@ -149,7 +145,12 @@ export default function TaskCalendar({
           </button>
         </div>
       </div>
-      <p className="cal-summary muted">{inMonth === 0 ? "No deadlines this month." : `${tasksLabel(inMonth)} due this month.`}</p>
+      <p className="cal-summary muted">{inMonth === 0 ? "No deadlines this month." : <><TaskCount n={inMonth} /> due this month.</>}</p>
+      <ul className="cal-legend" aria-label="Legend">
+        <li><span className="swatch swatch-light" aria-hidden="true" />1–2 tasks</li>
+        <li><span className="swatch swatch-busy" aria-hidden="true" />3 or more</li>
+        <li><span className="swatch swatch-overdue" aria-hidden="true" />Overdue</li>
+      </ul>
 
       <div className="cal-weekdays" aria-hidden="true">
         {WEEKDAYS.map(([short]) => <span key={short}>{short}</span>)}
@@ -162,8 +163,11 @@ export default function TaskCalendar({
           const dayTasks = byDay.get(key) ?? [];
           const overdue = dayTasks.filter((t) => isOverdue(t, today)).length;
           const date = keyToDate(key);
+          const busy = dayTasks.length >= BUSY_FROM;
+          const load = busy ? " load-busy" : dayTasks.length ? " load-light" : "";
           const label =
-            `${date.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}, ${tasksLabel(dayTasks.length)}` +
+            `${date.toLocaleDateString("en-GB", { day: "numeric", month: "long" })}, ${tasksLabel(dayTasks.length)}` +
+            (busy ? ", busy day" : "") +
             (overdue ? `, ${overdue} overdue` : "") +
             (key === today ? ", today" : "");
           return (
@@ -171,7 +175,7 @@ export default function TaskCalendar({
               key={key}
               type="button"
               data-date={key}
-              className={`cal-day${key === today ? " is-today" : ""}${key === selected ? " is-selected" : ""}${dayTasks.length ? " has-tasks" : ""}`}
+              className={`cal-day${load}${overdue ? " is-overdue" : ""}${key === today ? " is-today" : ""}${key === selected ? " is-selected" : ""}`}
               aria-label={label}
               aria-pressed={key === selected}
               aria-current={key === today ? "date" : undefined}
@@ -179,10 +183,12 @@ export default function TaskCalendar({
               onClick={() => selectDay(key)}
             >
               <span className="cal-num" aria-hidden="true">{day}</span>
-              {dayTasks.length > 0 && (
-                <span className={`cal-count${overdue ? " has-overdue" : ""}`} aria-hidden="true">
-                  <span className="cal-marker" />
-                  {overdue ? "!" : ""}{dayTasks.length}
+              {dayTasks.length > 0 && <span className="cal-count" aria-hidden="true">{dayTasks.length}</span>}
+              {(key === today || busy || overdue > 0) && (
+                <span className="cal-tags" aria-hidden="true">
+                  {key === today && <span className="cal-tag tag-today">Today</span>}
+                  {busy && <span className="cal-tag tag-busy">Busy</span>}
+                  {overdue > 0 && <span className="cal-tag tag-overdue">Overdue</span>}
                 </span>
               )}
             </button>
@@ -196,7 +202,7 @@ export default function TaskCalendar({
           <>
             <h3 className="cal-panel-title">
               {keyToDate(selected).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}
-              <span className="project-count">{tasksLabel(selectedTasks.length)}</span>
+              <span className="project-count"><TaskCount n={selectedTasks.length} /></span>
             </h3>
             {selectedTasks.length === 0 ? (
               <p className="muted cal-none">Nothing due on this day.</p>
@@ -213,7 +219,7 @@ export default function TaskCalendar({
         <section className="cal-undated">
           <h3 className="cal-panel-title">
             No deadline
-            <span className="project-count">{tasksLabel(undated.length)}</span>
+            <span className="project-count"><TaskCount n={undated.length} /></span>
           </h3>
           <CalendarTaskList tasks={undated} today={today} statusLabels={statusLabels} />
           <button type="button" className="text-button" onClick={onShowList}>

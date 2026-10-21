@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
-import TaskBoard, { type Task } from "@/components/TaskBoard";
+import TaskBoard from "@/components/TaskBoard";
+import { currentProject, loadBoard } from "@/lib/teams";
 
 export const metadata = { title: "Tasks · WhoDoesWhat" };
 
@@ -11,14 +12,27 @@ export default async function AppPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data } = await supabase
-    .from("tasks")
-    .select("id, title, assignee, deadline, status, project, created_at")
-    .order("created_at", { ascending: false });
+  // Sign-up sets the profile and personal project up; if that ever failed, fix it now (no onboarding).
+  let board = await loadBoard(supabase, user.id).catch(() => null);
+  if (!board || board.projects.length === 0) {
+    await supabase.rpc("ensure_profile");
+    board = await loadBoard(supabase, user.id).catch(() => null);
+  }
+
+  if (!board || !currentProject(board)) {
+    return (
+      <main className="container app-page">
+        <p className="error" role="alert">
+          Your workspace could not be set up. Please reload the page in a moment.
+        </p>
+      </main>
+    );
+  }
 
   return (
     <main className="container app-page">
-      <TaskBoard initialTasks={(data ?? []) as Task[]} />
+      {/* No remount on project switches: the board refreshes its own data in place. */}
+      <TaskBoard initialBoard={board} />
     </main>
   );
 }

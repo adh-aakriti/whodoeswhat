@@ -813,6 +813,82 @@ body:has(.app-page) .topbar :focus-visible { outline-color: #fff; }
   .board-calendar .cal-head { flex-wrap: wrap; }
 }
 
+/* ---------- Teams (project bar, owner workflow) ---------- */
+
+.project-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 6px;
+}
+.project-bar-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.75rem 1.5rem; }
+.project-switch { flex: 1 1 14rem; max-width: 22rem; }
+.project-switch label { font-weight: 600; }
+.join-code { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.6rem; min-height: 44px; }
+.join-code-label { font-size: 0.875rem; color: var(--muted); }
+.join-code-value {
+  padding: 0.2rem 0.5rem;
+  border: 1px dashed var(--card-border);
+  border-radius: 4px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+.project-actions { display: flex; flex-wrap: wrap; gap: 0 1.25rem; margin-left: auto; }
+.project-panel { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.75rem; }
+.project-panel .field { flex: 1 1 16rem; }
+.member-list { display: flex; flex-wrap: wrap; gap: 0.4rem 1.25rem; margin: 0; padding: 0; list-style: none; font-size: 0.95rem; }
+.member-list li { display: inline-flex; align-items: center; }
+.member-role { margin-left: 0.35rem; font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* Owner + deadline + Add task. Phones: stacked; 720-899: 2 columns; 900-1099: one row; 1100+: see board block. */
+@media (min-width: 900px) {
+  .task-fields.task-fields-team { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) auto; }
+  .task-fields-team .task-submit { grid-column: auto; width: auto; }
+}
+
+.btn-small { min-height: 44px; padding: 0.4rem 0.95rem; font-size: 0.9rem; }
+/* Where a new task will go, at the top of the add form. */
+.adding-to { margin: 0; font-size: 0.9rem; color: var(--muted); }
+.adding-to strong { color: var(--ink); font-weight: 600; }
+.state-note { font-size: 0.875rem; color: var(--muted); }
+.status-proposed .state-note, .has-handoff .state-note { color: var(--ink); font-weight: 600; }
+.legacy-note { font-size: 0.8rem; font-style: italic; color: var(--muted); }
+
+/* Task cards: title / owner + due / status / actions, at every width (actions need the room). */
+.app-page .sheet-head { display: none; }
+.sheet-app .sheet-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "title title" "owner due" "status status" "actions actions";
+  gap: 0.35rem 1rem;
+  align-items: center;
+  min-height: 0;
+}
+.sheet-app .cell-title { grid-area: title; }
+.sheet-app .cell-owner { grid-area: owner; }
+.sheet-app .cell-due { grid-area: due; justify-self: end; }
+.sheet-app .cell-status { grid-area: status; }
+.sheet-app .cell-actions { grid-area: actions; display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 1rem; justify-self: stretch; }
+.sheet-app .cell-actions:empty { display: none; }
+.sheet-app .cell-label { position: static; width: auto; height: auto; overflow: visible; clip: auto; white-space: normal; }
+.sheet-app .project-tag .cell-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.sheet-app .sheet-row > .task-picker { grid-column: 1 / -1; }
+.task-picker { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; padding-top: 0.5rem; border-top: 1px solid var(--rule); }
+.task-picker label { font-size: 0.875rem; font-weight: 600; }
+.task-picker select { width: auto; min-width: 12rem; max-width: 100%; }
+
+/* Open and declined: their own shapes and words; tints only reinforce them. */
+.status-open { --tint: var(--light-bg); --on-tint: var(--light-text); }
+.status-declined { --tint: var(--busy-bg); --on-tint: var(--alert-text); }
+.status-icon-open { color: var(--light-text); }
+.status-icon-declined { color: var(--alert-text); }
+.open-dot { background: transparent; border: 1.5px dashed var(--light-border); width: 12px; height: 12px; }
+
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
 }

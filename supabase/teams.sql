@@ -444,7 +444,8 @@ begin
    where id = p_task and state = 'open' and assignee_id is null
    returning * into t;
   if not found then
-    raise exception 'Someone else already took this task.' using errcode = '40001';
+    -- P0001, not 40001: PostgREST retries serialization failures, which would leave the loser waiting.
+    raise exception 'Someone else already took this task.' using errcode = 'P0001';
   end if;
   return t;
 end;
@@ -681,7 +682,8 @@ create trigger on_auth_user_created
   for each row execute function public.handle_new_user();
 
 -- Every insert, from either app, is normalised here, so a client cannot forge who accepted.
---   * project_id missing (live app) -> creator's current project, else personal project.
+--   * project_id missing (live app) -> creator's PERSONAL project (never a team: the old app has
+--     no idea which team is current, so its tasks stay private).
 --   * state missing (live app) -> owner = creator, state taken from the legacy status.
 --   * state 'open' -> nobody owns it. Owner = creator -> any of proposed/accepted/done.
 --     Owner = someone else -> always 'proposed' until they accept.
@@ -698,11 +700,7 @@ begin
   new.user_id := creator;
 
   if new.project_id is null then
-    select coalesce(
-             (select pr.current_project_id from public.profiles pr
-               where pr.id = creator and public.is_project_member(pr.current_project_id)),
-             (select p.id from public.projects p where p.created_by = creator and p.is_personal))
-      into new.project_id;
+    select p.id into new.project_id from public.projects p where p.created_by = creator and p.is_personal;
     if new.project_id is null then
       perform public.ensure_profile();
       select p.id into new.project_id from public.projects p where p.created_by = creator and p.is_personal;

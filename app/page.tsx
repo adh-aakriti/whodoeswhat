@@ -22,7 +22,7 @@ export default function Home() {
             Sign up
           </Link>
           <span className="muted">
-            or <Link href="/login" className="text-link">log in</Link>
+            Already have an account? <Link href="/login" className="text-link">Log in</Link>
           </span>
         </div>
       </section>

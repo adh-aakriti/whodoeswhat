@@ -249,7 +249,24 @@ body:has(.landing) .brand { font-size: clamp(1.9rem, 7vw, 2.25rem); line-height:
 @media (min-width: 600px) { .landing .tagline { font-size: 1.5rem; } }
 .display { font-size: clamp(2.25rem, 9vw, 2.75rem); max-width: 14ch; margin-bottom: 1.75rem; }
 /* One plain sentence under the headline: who it's for and how it works, before the button. */
-.landing .lead { margin: -0.75rem 0 1.75rem; max-width: 36ch; font-size: 1.0625rem; line-height: 1.5; color: var(--muted); }
+.landing .lead { margin: -0.75rem 0 1.1rem; max-width: 36ch; font-size: 1.0625rem; line-height: 1.5; color: var(--muted); }
+/* Invite above the Sign up button: serif, accent green (7.6:1 on paper), well below the headline's size. */
+.invite {
+  margin: 0;
+  max-width: 24ch;
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: 1.25rem; /* 20px; headline is 36px+ */
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--accent);
+  text-wrap: balance; /* no single word left alone on the second line */
+}
+/* Narrow phones: a little less space above the headline so Sign up stays on the first screen. */
+@media (max-width: 599px) {
+  .landing .tagline { margin-bottom: 2rem; }
+  .landing .eyebrow { margin-bottom: 0.9rem; }
+}
+.invite-sub { margin: 0.25rem 0 0.9rem; max-width: 38ch; font-size: 0.95rem; line-height: 1.45; color: var(--muted); } /* 6.8:1 */
 .cta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.25rem; }
 .landing-sheet { margin: 3rem 0 0; border-top: 2px solid var(--ink); }
 .sheet-caption {
@@ -673,6 +690,7 @@ body:has(.landing) .brand { font-size: clamp(1.9rem, 7vw, 2.25rem); line-height:
     column-gap: 4rem;
   }
   .landing .tagline { grid-column: 1 / -1; font-size: 1.875rem; margin-bottom: 3.5rem; } /* 30px vs 56-60px headline */
+  .invite { font-size: 1.5rem; max-width: none; } /* 24px vs 56-60px headline; one line on desktop */
   .display { font-size: clamp(3.5rem, 4.2vw, 3.75rem); max-width: none; }
   .landing-sheet { margin-top: 0; }
   .how { grid-column: 1 / -1; margin-top: 4rem; }

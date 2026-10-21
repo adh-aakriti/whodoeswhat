@@ -21,6 +21,8 @@ export default function Home() {
           Your group shares one task list. Every task goes to one named person, who accepts it, so everyone
           knows who is doing what.
         </p>
+        <p className="invite">Send a code. Get everyone on the list.</p>
+        <p className="invite-sub">Start a project, share its join code, and your team joins in seconds.</p>
         <div className="cta">
           <Link href="/signup" className="btn btn-primary">
             Sign up
@@ -59,9 +61,8 @@ export default function Home() {
 
       <p className="how">
         <ListChecksIcon size={20} className="how-icon" />
-        <strong>How it works.</strong> One person starts a project and shares its join code with the group.
-        Everyone sees the same tasks. Each task gets an owner by name and a deadline, and the owner accepts it
-        or says no. Anyone can pick up a task nobody owns yet.
+        <strong>How it works.</strong> Give each task a deadline. Owners can also say no, and anyone can pick up
+        a task nobody owns yet. The list shows what is proposed, accepted and done.
       </p>
     </main>
   );

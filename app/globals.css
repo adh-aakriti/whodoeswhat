@@ -853,6 +853,9 @@ body:has(.app-page) .topbar :focus-visible { outline-color: #fff; }
 }
 
 .btn-small { min-height: 44px; padding: 0.4rem 0.95rem; font-size: 0.9rem; }
+/* Where a new task will go, at the top of the add form. */
+.adding-to { margin: 0; font-size: 0.9rem; color: var(--muted); }
+.adding-to strong { color: var(--ink); font-weight: 600; }
 .state-note { font-size: 0.875rem; color: var(--muted); }
 .status-proposed .state-note, .has-handoff .state-note { color: var(--ink); font-weight: 600; }
 .legacy-note { font-size: 0.8rem; font-style: italic; color: var(--muted); }

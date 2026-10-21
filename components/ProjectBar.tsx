@@ -1,28 +1,33 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase-browser";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import Avatar from "@/components/Avatar";
-import { formatJoinCode, type Member, type ProjectInfo } from "@/lib/teams";
+import { formatJoinCode, projectLabel, type Member, type ProjectInfo } from "@/lib/teams";
 
 type Panel = null | "new" | "join" | "name";
 
-// Current project, switching, creating, joining, sharing the code, and your display name.
-// Everything is stored in Supabase (profiles.current_project_id, display_name), never in the browser.
+// The current project (where new tasks go), switching, creating, joining, sharing the code, and your
+// display name. Everything is stored in Supabase (profiles.current_project_id, display_name), never in
+// the browser. After each change the board refreshes its data in place (no page reload), so nothing
+// you are typing elsewhere is lost.
 export default function ProjectBar({
+  supabase,
   me,
-  project,
+  current,
   projects,
   members,
+  onSwitch,
+  onChanged,
 }: {
+  supabase: SupabaseClient;
   me: { id: string; name: string };
-  project: ProjectInfo;
+  current: ProjectInfo;
   projects: ProjectInfo[];
-  members: Member[];
+  members: Member[]; // members of the current project
+  onSwitch: (projectId: string) => Promise<string | null>; // returns an error message, or null
+  onChanged: () => Promise<void>;
 }) {
-  const router = useRouter();
-  const supabase = createClient();
   const [panel, setPanel] = useState<Panel>(null);
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
@@ -39,13 +44,14 @@ export default function ProjectBar({
     setBusy(true);
     setError(null);
     const { error } = await action();
-    setBusy(false);
     if (error) {
+      setBusy(false);
       setError(error.message);
       return;
     }
+    await onChanged();
+    setBusy(false);
     setPanel(null);
-    router.refresh();
   }
 
   function submit(e: React.FormEvent) {
@@ -57,18 +63,22 @@ export default function ProjectBar({
     if (panel === "name") run(() => supabase.from("profiles").update({ display_name: v }).eq("id", me.id));
   }
 
-  function switchTo(id: string) {
-    run(() => supabase.from("profiles").update({ current_project_id: id }).eq("id", me.id));
+  async function switchTo(id: string) {
+    setBusy(true);
+    setError(null);
+    const message = await onSwitch(id);
+    setBusy(false);
+    if (message) setError(message);
   }
 
   function leave() {
-    if (!window.confirm(`Leave "${project.name}"? Your unfinished tasks there go back to the team as open tasks.`)) return;
-    run(() => supabase.rpc("leave_project", { p_project: project.id }));
+    if (!window.confirm(`Leave "${current.name}"? Your unfinished tasks there go back to the team as open tasks.`)) return;
+    run(() => supabase.rpc("leave_project", { p_project: current.id }));
   }
 
   async function copyCode() {
     try {
-      await navigator.clipboard.writeText(formatJoinCode(project.joinCode));
+      await navigator.clipboard.writeText(formatJoinCode(current.joinCode));
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -86,20 +96,20 @@ export default function ProjectBar({
     <section className="project-bar" aria-label="Project">
       <div className="project-bar-row">
         <div className="field project-switch">
-          <label htmlFor="project-switch">Project</label>
-          <select id="project-switch" value={project.id} onChange={(e) => switchTo(e.target.value)} disabled={busy}>
+          <label htmlFor="project-switch">New tasks go to</label>
+          <select id="project-switch" value={current.id} onChange={(e) => switchTo(e.target.value)} disabled={busy}>
             {projects.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.isPersonal ? "Personal (only you)" : p.name}
+                {projectLabel(p)}
               </option>
             ))}
           </select>
         </div>
 
-        {!project.isPersonal && (
+        {!current.isPersonal && (
           <div className="join-code">
             <span className="join-code-label">Join code</span>
-            <code className="join-code-value">{formatJoinCode(project.joinCode)}</code>
+            <code className="join-code-value">{formatJoinCode(current.joinCode)}</code>
             <button type="button" className="text-button" onClick={copyCode}>
               {copied ? "Copied" : "Copy"}
             </button>
@@ -116,7 +126,7 @@ export default function ProjectBar({
           <button type="button" className="text-button" aria-expanded={panel === "name"} onClick={() => open("name")}>
             Your name: {me.name}
           </button>
-          {!project.isPersonal && (
+          {!current.isPersonal && (
             <button type="button" className="text-button quiet" onClick={leave} disabled={busy}>
               Leave project
             </button>
@@ -147,12 +157,12 @@ export default function ProjectBar({
 
       {error && <p className="error" role="alert">{error}</p>}
 
-      <ul className="member-list" aria-label={`People in ${project.isPersonal ? "your personal project" : project.name}`}>
+      <ul className="member-list" aria-label={`People in ${current.isPersonal ? "your personal project" : current.name}`}>
         {members.map((m) => (
           <li key={m.id}>
             <Avatar name={m.name} />
             {m.id === me.id ? `${m.name} (you)` : m.name}
-            {m.role === "owner" && !project.isPersonal && <span className="member-role">owner</span>}
+            {m.role === "owner" && !current.isPersonal && <span className="member-role">owner</span>}
           </li>
         ))}
       </ul>

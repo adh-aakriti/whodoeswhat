@@ -10,7 +10,16 @@ import { projectTone } from "@/lib/projectTone";
 import { todayKey } from "@/lib/dates";
 import DueChip from "@/components/DueChip";
 import TaskCount from "@/components/TaskCount";
-import { TASK_COLUMNS, rowToTask, type Member, type ProjectInfo, type Status, type Task } from "@/lib/teams";
+import {
+  TASK_COLUMNS,
+  currentProject,
+  loadBoard,
+  projectLabel,
+  rowToTask,
+  type Board,
+  type Status,
+  type Task,
+} from "@/lib/teams";
 
 export type { Status, Task } from "@/lib/teams";
 
@@ -22,29 +31,22 @@ const STATUS_LABELS: Record<Status, string> = {
   done: "Done",
 };
 const OPEN = "open"; // owner <select> value for "nobody yet"
+const REFRESH_MS = 10_000;
 
 type Picker = { taskId: string; kind: "assign" | "handoff"; to: string } | null;
 
-export default function TaskBoard({
-  me,
-  project,
-  projects,
-  initialMembers,
-  initialTasks,
-}: {
-  me: { id: string; name: string };
-  project: ProjectInfo;
-  projects: ProjectInfo[];
-  initialMembers: Member[];
-  initialTasks: Task[];
-}) {
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
-  const [members, setMembers] = useState<Member[]>(initialMembers);
+export default function TaskBoard({ initialBoard }: { initialBoard: Board }) {
+  const [supabase] = useState(() => createClient());
+  const [board, setBoard] = useState<Board>(initialBoard);
   const [title, setTitle] = useState("");
-  const [owner, setOwner] = useState<string>(me.id);
+  const [owner, setOwner] = useState<string>(initialBoard.me.id);
   const [deadline, setDeadline] = useState("");
   const [picker, setPicker] = useState<Picker>(null);
   const [busyTask, setBusyTask] = useState<string | null>(null);
+  const [filter, setFilter] = useState<string | null>(null); // null = all projects
+  const [view, setView] = useState<"list" | "calendar">("list");
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
   // The user's local date, known only in the browser (the server may be in another timezone),
   // so "due in N days" chips and the calendar appear after hydration.
@@ -54,57 +56,84 @@ export default function TaskBoard({
     const id = setInterval(() => setToday(todayKey()), 60_000);
     return () => clearInterval(id);
   }, []);
-  const [view, setView] = useState<"list" | "calendar">("list");
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const supabase = createClient();
 
-  const isOwnerOfProject = project.role === "owner";
-  const nameOf = useCallback(
-    (id: string | null) => (id === null ? null : id === me.id ? "you" : members.find((m) => m.id === id)?.name ?? "a former member"),
-    [members, me.id],
-  );
-  const displayName = (id: string | null) => (id === me.id ? me.name : nameOf(id) ?? "");
-  const others = members.filter((m) => m.id !== me.id);
+  const me = { id: board.me.id, name: board.me.name };
+  const current = currentProject(board)!;
+  const projectById = useMemo(() => new Map(board.projects.map((p) => [p.id, p])), [board.projects]);
+  const membersOf = useCallback((projectId: string) => board.members.filter((m) => m.projectId === projectId), [board.members]);
+  const nameById = useMemo(() => new Map(board.members.map((m) => [m.id, m.name])), [board.members]);
+  const displayName = (id: string | null) => (id === null ? "" : id === me.id ? me.name : nameById.get(id) ?? "a former member");
+  const projectName = (id: string) => {
+    const p = projectById.get(id);
+    return p ? (p.isPersonal ? "Personal" : p.name) : "Project";
+  };
+  const isOwnerOf = (projectId: string) => projectById.get(projectId)?.role === "owner";
 
-  // Teammates change things too: pick up their changes when the tab comes back into view.
-  const reload = useCallback(async () => {
-    const [{ data: taskRows }, { data: memberRows }] = await Promise.all([
-      supabase.from("tasks").select(TASK_COLUMNS).eq("project_id", project.id).order("created_at", { ascending: false }),
-      supabase.from("project_members").select("user_id, role, profiles(display_name)").eq("project_id", project.id),
-    ]);
-    if (taskRows) setTasks(taskRows as unknown as Task[]);
-    if (memberRows)
-      setMembers(
-        (memberRows as unknown as { user_id: string; role: Member["role"]; profiles: { display_name: string } | null }[]).map((m) => ({
-          id: m.user_id,
-          name: m.profiles?.display_name ?? "Member",
-          role: m.role,
-        })),
-      );
-  }, [supabase, project.id]);
-  useEffect(() => {
-    const onVisible = () => document.visibilityState === "visible" && reload();
-    document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [reload]);
-
-  // Grouped by owner, because names are the point: open tasks first, then me, then teammates.
-  const groups = useMemo(() => {
-    const byOwner = new Map<string, Task[]>();
-    for (const t of tasks) {
-      const key = t.assignee_id ?? OPEN;
-      const list = byOwner.get(key);
-      if (list) list.push(t);
-      else byOwner.set(key, [t]);
+  // ---- Keeping the board fresh -------------------------------------------------------------
+  // Every local change bumps `mutation`; a refresh that started before a local change is dropped,
+  // so a slow background response can never briefly undo what the user just did.
+  const mutation = useRef(0);
+  const latestRefresh = useRef(0);
+  const markChanged = () => {
+    mutation.current += 1;
+  };
+  const refresh = useCallback(async () => {
+    const startedAt = mutation.current;
+    const id = ++latestRefresh.current;
+    try {
+      let next = await loadBoard(supabase, initialBoard.me.id);
+      if (!next) {
+        await supabase.rpc("ensure_profile");
+        next = await loadBoard(supabase, initialBoard.me.id);
+      }
+      if (!next || id !== latestRefresh.current || startedAt !== mutation.current) return;
+      const fresh = next;
+      // Only re-render when something actually changed: no flashing, no lost input or scroll.
+      setBoard((prev) => (JSON.stringify(prev) === JSON.stringify(fresh) ? prev : fresh));
+    } catch {
+      // Background refresh failed (offline, timeout, ...): keep showing what we have.
     }
-    const order = [OPEN, me.id, ...others.map((m) => m.id)];
-    return [...byOwner.entries()]
-      .sort(([a], [b]) => (order.indexOf(a) + 1 || order.length + 1) - (order.indexOf(b) + 1 || order.length + 1))
-      .map(([key, items]) => ({ key, name: key === OPEN ? "Open, needs an owner" : displayName(key), items }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tasks, members, me.id]);
+  }, [supabase, initialBoard.me.id]);
 
+  // Every 10 s while the tab is visible; at once when it becomes visible or the window regains focus.
+  useEffect(() => {
+    let timer: ReturnType<typeof setInterval> | null = null;
+    const start = () => {
+      if (!timer) timer = setInterval(refresh, REFRESH_MS);
+    };
+    const stop = () => {
+      if (timer) clearInterval(timer);
+      timer = null;
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        refresh();
+        start();
+      } else stop();
+    };
+    const onFocus = () => refresh();
+    if (document.visibilityState === "visible") start();
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [refresh]);
+
+  // Close an open owner / handoff form if its task disappeared; keep the owner choice valid.
+  useEffect(() => {
+    if (picker && !board.tasks.some((t) => t.id === picker.taskId)) setPicker(null);
+  }, [board.tasks, picker]);
+  useEffect(() => {
+    if (owner !== OPEN && owner !== me.id && !membersOf(current.id).some((m) => m.id === owner)) setOwner(me.id);
+  }, [owner, me.id, current.id, membersOf]);
+  useEffect(() => {
+    if (filter !== null && !projectById.has(filter)) setFilter(null);
+  }, [filter, projectById]);
+
+  // ---- Actions (errors are shown only for these) --------------------------------------------
   async function addTask(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = title.trim();
@@ -117,7 +146,7 @@ export default function TaskBoard({
       .insert({
         title: trimmed,
         deadline: deadline || null,
-        project_id: project.id,
+        project_id: current.id,
         assignee_id: owner === OPEN ? null : owner,
         state: owner === OPEN ? "open" : "accepted",
       })
@@ -128,13 +157,17 @@ export default function TaskBoard({
       setError(error.message);
       return;
     }
-    setTasks((prev) => [data as unknown as Task, ...prev]);
-    // A new task always shows up as a core-item, so go back to the list.
+    markChanged();
+    const saved = data as unknown as Task;
+    setBoard((b) => ({ ...b, tasks: [saved, ...b.tasks] }));
+    // A new task always shows up as a core-item: back to the list, and to a filter that includes it.
     setView("list");
+    if (filter !== null && filter !== saved.project_id) setFilter(null);
     setTitle("");
     setOwner(me.id);
     setDeadline("");
     titleRef.current?.focus();
+    refresh();
   }
 
   // Every workflow change goes through a database function that checks who may do it.
@@ -145,22 +178,41 @@ export default function TaskBoard({
     setBusyTask(null);
     if (error) {
       setError(error.message);
-      reload();
+      refresh();
       return;
     }
+    markChanged();
     const updated = rowToTask(data as Record<string, unknown>);
-    setTasks((prev) => prev.map((t) => (t.id === taskId ? updated : t)));
+    setBoard((b) => ({ ...b, tasks: b.tasks.map((t) => (t.id === taskId ? updated : t)) }));
     setPicker(null);
+    refresh();
   }
 
   async function removeTask(id: string) {
-    const before = tasks;
-    setTasks((prev) => prev.filter((t) => t.id !== id));
+    setError(null);
+    markChanged();
+    const before = board.tasks;
+    setBoard((b) => ({ ...b, tasks: b.tasks.filter((t) => t.id !== id) }));
     const { error } = await supabase.from("tasks").delete().eq("id", id);
     if (error) {
-      setTasks(before);
+      markChanged();
+      setBoard((b) => ({ ...b, tasks: before }));
       setError(error.message);
     }
+    refresh();
+  }
+
+  // Switching the current project only changes where new tasks go (and whose code / members show).
+  async function switchProject(projectId: string): Promise<string | null> {
+    markChanged();
+    setBoard((b) => ({ ...b, me: { ...b.me, currentProjectId: projectId } }));
+    const { error } = await supabase.from("profiles").update({ current_project_id: projectId }).eq("id", me.id);
+    if (error) {
+      await refresh();
+      return error.message;
+    }
+    refresh();
+    return null;
   }
 
   function stateNote(t: Task) {
@@ -181,7 +233,9 @@ export default function TaskBoard({
 
   function actions(t: Task) {
     const mine = t.assignee_id === me.id;
-    const canAssign = (t.user_id === me.id || isOwnerOfProject) && ["open", "proposed", "declined"].includes(t.status);
+    const owns = isOwnerOf(t.project_id);
+    const others = membersOf(t.project_id).filter((m) => m.id !== me.id);
+    const canAssign = (t.user_id === me.id || owns) && ["open", "proposed", "declined"].includes(t.status);
     const list: { label: string; run: () => void; primary?: boolean }[] = [];
     if (t.status === "proposed" && mine) {
       list.push({ label: "Accept", run: () => act(t.id, "accept_task"), primary: true });
@@ -197,24 +251,46 @@ export default function TaskBoard({
       if (others.length) list.push({ label: "Hand off…", run: () => setPicker({ taskId: t.id, kind: "handoff", to: "" }) });
     }
     if (t.status === "accepted" && mine && t.handoff_to) list.push({ label: "Cancel handoff", run: () => act(t.id, "cancel_handoff") });
-    if (t.status === "done" && (mine || isOwnerOfProject)) list.push({ label: "Reopen", run: () => act(t.id, "reopen_task") });
+    if (t.status === "done" && (mine || owns)) list.push({ label: "Reopen", run: () => act(t.id, "reopen_task") });
     if (canAssign) list.push({ label: t.status === "open" ? "Assign…" : "Reassign…", run: () => setPicker({ taskId: t.id, kind: "assign", to: "" }) });
     return list;
   }
 
-  const calendarTasks = useMemo(
-    () => tasks.map((t) => ({ ...t, assignee: t.assignee_id ? displayName(t.assignee_id) : "Nobody yet" })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [tasks, members],
-  );
+  // ---- What to show ---------------------------------------------------------------------------
+  const shownProjects = board.projects.filter((p) => filter === null || p.id === filter);
+  const groups = shownProjects
+    .map((p) => ({ project: p, items: board.tasks.filter((t) => t.project_id === p.id), memberCount: membersOf(p.id).length }))
+    .filter((g) => g.items.length > 0);
+  const shownTasks = filter === null ? board.tasks : board.tasks.filter((t) => t.project_id === filter);
+  const calendarTasks = shownTasks.map((t) => ({
+    ...t,
+    assignee: t.assignee_id ? displayName(t.assignee_id) : "Nobody yet",
+    project: projectName(t.project_id), // the project's colour and name on each calendar entry
+  }));
+  const currentMembers = membersOf(current.id);
+  const currentOthers = currentMembers.filter((m) => m.id !== me.id);
 
   return (
     <>
-      <ProjectBar me={me} project={project} projects={projects} members={members} />
+      <ProjectBar
+        supabase={supabase}
+        me={me}
+        current={current}
+        projects={board.projects}
+        members={currentMembers}
+        onSwitch={switchProject}
+        onChanged={async () => {
+          markChanged();
+          await refresh();
+        }}
+      />
       {/* One grid, each part rendered once. Below 1100px it is a single column and the List / Calendar
           toggle picks what shows; from 1100px the list and the calendar sit side by side (see .board CSS). */}
       <div className="board" data-view={view}>
         <form className="task-form board-form" onSubmit={addTask}>
+          <p className="adding-to" id="adding-to">
+            Adding to: <strong>{projectLabel(current)}</strong>
+          </p>
           {/* Only the title is required; owner defaults to me (accepted at once), deadline to none. */}
           <div className="field">
             {/* The visible cue is the placeholder; this label keeps a real accessible name for screen readers. */}
@@ -231,6 +307,7 @@ export default function TaskBoard({
                 onChange={(e) => setTitle(e.target.value)}
                 maxLength={200}
                 required
+                aria-describedby="adding-to"
                 data-testid="core-input"
               />
             </div>
@@ -240,7 +317,7 @@ export default function TaskBoard({
               <label htmlFor="task-assignee">Owner</label>
               <select id="task-assignee" value={owner} onChange={(e) => setOwner(e.target.value)}>
                 <option value={me.id}>Me ({me.name})</option>
-                {others.map((m) => (
+                {currentOthers.map((m) => (
                   <option key={m.id} value={m.id}>{m.name} (asks them to accept)</option>
                 ))}
                 <option value={OPEN}>Nobody yet: open task</option>
@@ -272,36 +349,52 @@ export default function TaskBoard({
                   Calendar
                 </button>
               </div>
+              {board.projects.length > 1 && (
+                <div className="field filter">
+                  <label htmlFor="project-filter">Show</label>
+                  <select id="project-filter" value={filter ?? ""} onChange={(e) => setFilter(e.target.value || null)}>
+                    <option value="">All projects</option>
+                    {board.projects.map((p) => (
+                      <option key={p.id} value={p.id}>{projectLabel(p)}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           </div>
         </div>
         <div className="board-list">
-          {tasks.length === 0 ? (
-            <p className="muted empty">Nothing on the sheet yet. Add the first task above and put a name on it.</p>
+          {shownTasks.length === 0 ? (
+            <p className="muted empty">
+              {filter === null
+                ? "Nothing on the sheet yet. Add the first task above and put a name on it."
+                : `No tasks in ${projectName(filter)} yet.`}
+            </p>
           ) : (
             groups.map((g, i) => (
-              <section key={g.key} className="project-group" aria-labelledby={`owner-group-${i}`}>
-                <h2 id={`owner-group-${i}`} className="project-heading">
+              <section key={g.project.id} className="project-group" aria-labelledby={`project-group-${i}`}>
+                <h2 id={`project-group-${i}`} className="project-heading">
                   <span className="project-name">
-                    {g.key === OPEN ? <span className="project-dot open-dot" aria-hidden="true" /> : <Avatar name={g.name} />}
-                    {g.key === me.id ? `${me.name} (you)` : g.name}
+                    <span className={`project-dot tone-${projectTone(projectName(g.project.id))}`} aria-hidden="true" />
+                    {projectName(g.project.id)}
                   </span>
                   <span className="project-count">
-                    <TaskCount n={g.items.length} />
+                    {g.memberCount} {g.memberCount === 1 ? "member" : "members"} · <TaskCount n={g.items.length} />
                   </span>
                 </h2>
                 <ul className="sheet sheet-app">
                   {g.items.map((t) => {
                     const legacyNote = [
                       t.assignee ? `Owner noted as ${t.assignee}` : "",
-                      project.isPersonal && t.project && t.project !== "General" ? `List: ${t.project}` : "",
+                      g.project.isPersonal && t.project && t.project !== "General" ? `List: ${t.project}` : "",
                     ].filter(Boolean).join(" · ");
                     const pickerHere = picker?.taskId === t.id ? picker : null;
-                    const choices = pickerHere?.kind === "handoff" ? others : members;
+                    const projectMembers = membersOf(t.project_id);
+                    const choices = pickerHere?.kind === "handoff" ? projectMembers.filter((m) => m.id !== me.id) : projectMembers;
                     return (
                       <li
                         key={t.id}
-                        className={`sheet-row status-${t.status} tone-${projectTone(t.project)}${t.handoff_to ? " has-handoff" : ""}`}
+                        className={`sheet-row status-${t.status} tone-${projectTone(projectName(t.project_id))}${t.handoff_to ? " has-handoff" : ""}`}
                         data-testid="core-item"
                       >
                         <span className="cell-title">
@@ -337,7 +430,7 @@ export default function TaskBoard({
                               {a.label}
                             </button>
                           ))}
-                          {(t.user_id === me.id || isOwnerOfProject) && (
+                          {(t.user_id === me.id || isOwnerOf(t.project_id)) && (
                             <button
                               type="button"
                               className="text-button quiet"

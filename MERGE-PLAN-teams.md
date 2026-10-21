@@ -172,7 +172,7 @@ All on the **test** project (`wctuhfwsursabdagnzns`) or a local in-memory Postgr
 | Second longest | 12.5 s: one "delete", from about 01:50:02 to 01:50:14 UTC, then 204 |
 | After 01:54 | All normal again (21 cycles); old-app tasks went through the new trigger correctly |
 
-**Issue found here, fixed since (see 7.5), and the fix still needs a re-test on the test project.** Nothing failed, but one old-app request waited 3 min 24 s. The most likely cause is the order in which the script takes locks: it takes the strongest lock on `tasks` in section 1, but only asks for the lock on `auth.users` (for the sign-up trigger) in section 7. If that second lock has to wait, everyone using `tasks` waits too. The fix is to take both locks at the very start, `auth.users` first, with a short `lock_timeout`, so the script either gets them within seconds or stops and changes nothing. Then repeat 7.2 and 7.3 on the test project.
+**Issue found here. The lock fix (7.5) was re-tested in 7.6 and did not remove the long waits.** Nothing failed, but one old-app request waited 3 min 24 s. The most likely cause is the order in which the script takes locks: it takes the strongest lock on `tasks` in section 1, but only asks for the lock on `auth.users` (for the sign-up trigger) in section 7. If that second lock has to wait, everyone using `tasks` waits too. The fix is to take both locks at the very start, `auth.users` first, with a short `lock_timeout`, so the script either gets them within seconds or stops and changes nothing. Then repeat 7.2 and 7.3 on the test project.
 
 ### 7.4 The three suites, on the migrated test project
 
@@ -207,4 +207,20 @@ All on the **test** project (`wctuhfwsursabdagnzns`) or a local in-memory Postgr
 | Total | 25 / 25 |
 
 PGlite regression after the change: 14 / 14 and 14 / 14.
+
+### 7.6 Re-test on the test project with the lock fix (heartbeat 02:10:50–02:14:32 UTC; rollback, then final, both committed: 19 tasks, 7 users, checksum `596dcfa4…` unchanged)
+
+| Measure | Result |
+|---|---|
+| Requests | 320 (80 cycles) |
+| Status other than 200 / 201 / 204 | **0** |
+| Waits over 1 s | 02:10:55–02:11:17 **22.5 s** (delete) · 02:12:00–02:12:06 three requests of 1.5–2.1 s · 02:12:34–02:12:47 **12.9 s** (delete) · 02:12:48–02:14:32 **104 s** (delete) |
+| Script lock waits | None hit the 5 s limit (no "could not get the locks" message) |
+
+**Still open: must be understood before live.** The scripts take their locks at the start and, locally, run in about 20 ms, yet the old app waited up to 104 s. The 104 s wait also continued after both runs had finished and returned their results. So the most likely cause is no longer the script's locks but the API layer: after any schema change, Supabase's API (PostgREST) reloads its schema cache, and requests can wait while it does. Next steps:
+
+1. In the test project's dashboard, look at **Logs → PostgREST (API)** and **Logs → Postgres** for 02:10–02:15 UTC: lines like "Schema cache loaded in … ms", connection or pool messages, and long "duration" lines.
+2. A harmless experiment on the test project, with the heartbeat running: run only `notify pgrst, 'reload schema';` (it changes nothing in the database; it only asks the API to reload). If the heartbeat stalls in the same way, the API reload is the cause.
+
+The three suites after the run: 104 / 104, 16 / 16, 43 / 43 (163 / 163).
 

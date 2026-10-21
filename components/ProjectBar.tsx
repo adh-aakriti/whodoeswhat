@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import Avatar from "@/components/Avatar";
+import { LeaveIcon } from "@/components/Icons";
 import { formatJoinCode, projectLabel, type Member, type ProjectInfo } from "@/lib/teams";
 
 type Panel = null | "new" | "join" | "name";
@@ -127,7 +128,8 @@ export default function ProjectBar({
             Your name: {me.name}
           </button>
           {!current.isPersonal && (
-            <button type="button" className="text-button quiet" onClick={leave} disabled={busy}>
+            <button type="button" className="btn btn-small btn-danger" onClick={leave} disabled={busy}>
+              <LeaveIcon />
               Leave project
             </button>
           )}

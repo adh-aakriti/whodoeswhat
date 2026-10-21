@@ -891,6 +891,12 @@ body:has(.app-page) .topbar :focus-visible { outline-color: #fff; }
 /* The main action on a task card (Accept, I'll take it, Mark done, Accept handoff, Save): green like Add task. */
 .btn.btn-small { background: var(--accent); border-color: var(--accent); color: var(--paper); }
 .btn.btn-small:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
+/* Destructive (Delete, Decline, Leave project): red outlined, never filled green.
+   Red text 8.0:1 or more on every card and panel; red border 5.6:1 or more. */
+.btn.btn-small.btn-danger { background: transparent; border-color: var(--busy-border); color: var(--alert-text); }
+.btn.btn-small.btn-danger:hover:not(:disabled) { background: var(--busy-bg); border-color: var(--busy-border); }
+.confirm-delete { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.9rem; }
+.confirm-text { font-size: 0.9rem; font-weight: 600; color: var(--alert-text); }
 /* Where a new task will go, at the top of the add form. */
 .adding-to { margin: 0; font-size: 0.9rem; color: var(--muted); }
 .adding-to strong { color: var(--ink); font-weight: 600; }

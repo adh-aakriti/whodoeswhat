@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
-import { CalendarIcon, ListIcon, PlusIcon, StatusIcon, TrashIcon } from "@/components/Icons";
+import { CalendarIcon, CloseIcon, ListIcon, PlusIcon, StatusIcon, TrashIcon } from "@/components/Icons";
 import Avatar from "@/components/Avatar";
 import TaskCalendar from "@/components/TaskCalendar";
 import ProjectBar from "@/components/ProjectBar";
@@ -42,6 +42,8 @@ export default function TaskBoard({ initialBoard }: { initialBoard: Board }) {
   const [owner, setOwner] = useState<string>(initialBoard.me.id);
   const [deadline, setDeadline] = useState("");
   const [picker, setPicker] = useState<Picker>(null);
+  // Delete is irreversible, so it asks first (inline, on that card only).
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [busyTask, setBusyTask] = useState<string | null>(null);
   const [filter, setFilter] = useState<string | null>(null); // null = all projects
   const [view, setView] = useState<"list" | "calendar">("list");
@@ -128,7 +130,8 @@ export default function TaskBoard({ initialBoard }: { initialBoard: Board }) {
   // Close an open owner / handoff form if its task disappeared; keep the owner choice valid.
   useEffect(() => {
     if (picker && !board.tasks.some((t) => t.id === picker.taskId)) setPicker(null);
-  }, [board.tasks, picker]);
+    if (confirmDelete && !board.tasks.some((t) => t.id === confirmDelete)) setConfirmDelete(null);
+  }, [board.tasks, picker, confirmDelete]);
   useEffect(() => {
     if (owner !== OPEN && owner !== me.id && !membersOf(current.id).some((m) => m.id === owner)) setOwner(me.id);
   }, [owner, me.id, current.id, membersOf]);
@@ -192,6 +195,7 @@ export default function TaskBoard({ initialBoard }: { initialBoard: Board }) {
   }
 
   async function removeTask(id: string) {
+    setConfirmDelete(null);
     setError(null);
     markChanged();
     const before = board.tasks;
@@ -239,23 +243,24 @@ export default function TaskBoard({ initialBoard }: { initialBoard: Board }) {
     const owns = isOwnerOf(t.project_id);
     const others = membersOf(t.project_id).filter((m) => m.id !== me.id);
     const canAssign = (t.user_id === me.id || owns) && ["open", "proposed", "declined"].includes(t.status);
-    const list: { label: string; run: () => void; primary?: boolean }[] = [];
+    // kind: "primary" (filled green), "secondary", or "danger" (red outlined, never green).
+    const list: { label: string; run: () => void; kind: "primary" | "secondary" | "danger" }[] = [];
     if (t.status === "proposed" && mine) {
-      list.push({ label: "Accept", run: () => act(t.id, "accept_task"), primary: true });
-      list.push({ label: "Decline", run: () => act(t.id, "decline_task") });
+      list.push({ label: "Accept", run: () => act(t.id, "accept_task"), kind: "primary" });
+      list.push({ label: "Decline", run: () => act(t.id, "decline_task"), kind: "danger" });
     }
-    if (t.status === "open") list.push({ label: "I'll take it", run: () => act(t.id, "take_task"), primary: true });
+    if (t.status === "open") list.push({ label: "I'll take it", run: () => act(t.id, "take_task"), kind: "primary" });
     if (t.status === "accepted" && t.handoff_to === me.id) {
-      list.push({ label: "Accept handoff", run: () => act(t.id, "respond_handoff", { p_accept: true }), primary: true });
-      list.push({ label: "Decline handoff", run: () => act(t.id, "respond_handoff", { p_accept: false }) });
+      list.push({ label: "Accept handoff", run: () => act(t.id, "respond_handoff", { p_accept: true }), kind: "primary" });
+      list.push({ label: "Decline handoff", run: () => act(t.id, "respond_handoff", { p_accept: false }), kind: "danger" });
     }
     if (t.status === "accepted" && mine && !t.handoff_to) {
-      list.push({ label: "Mark done", run: () => act(t.id, "complete_task"), primary: true });
-      if (others.length) list.push({ label: "Hand off…", run: () => setPicker({ taskId: t.id, kind: "handoff", to: "" }) });
+      list.push({ label: "Mark done", run: () => act(t.id, "complete_task"), kind: "primary" });
+      if (others.length) list.push({ label: "Hand off…", run: () => setPicker({ taskId: t.id, kind: "handoff", to: "" }), kind: "secondary" });
     }
-    if (t.status === "accepted" && mine && t.handoff_to) list.push({ label: "Cancel handoff", run: () => act(t.id, "cancel_handoff") });
-    if (t.status === "done" && (mine || owns)) list.push({ label: "Reopen", run: () => act(t.id, "reopen_task") });
-    if (canAssign) list.push({ label: t.status === "open" ? "Assign…" : "Reassign…", run: () => setPicker({ taskId: t.id, kind: "assign", to: "" }) });
+    if (t.status === "accepted" && mine && t.handoff_to) list.push({ label: "Cancel handoff", run: () => act(t.id, "cancel_handoff"), kind: "secondary" });
+    if (t.status === "done" && (mine || owns)) list.push({ label: "Reopen", run: () => act(t.id, "reopen_task"), kind: "secondary" });
+    if (canAssign) list.push({ label: t.status === "open" ? "Assign…" : "Reassign…", run: () => setPicker({ taskId: t.id, kind: "assign", to: "" }), kind: "secondary" });
     return list;
   }
 
@@ -422,27 +427,42 @@ export default function TaskBoard({ initialBoard }: { initialBoard: Board }) {
                           {t.handoff_to && t.status === "accepted" ? "Handoff pending" : STATUS_LABELS[t.status]}
                         </span>
                         <span className="cell-actions">
-                          {actions(t).map((a) => (
-                            <button
-                              key={a.label}
-                              type="button"
-                              className={a.primary ? "btn btn-small" : "text-button"}
-                              disabled={busyTask === t.id}
-                              onClick={a.run}
-                            >
-                              {a.label}
-                            </button>
-                          ))}
-                          {(t.user_id === me.id || isOwnerOf(t.project_id)) && (
-                            <button
-                              type="button"
-                              className="text-button quiet"
-                              onClick={() => removeTask(t.id)}
-                              aria-label={`Delete ${t.title}`}
-                            >
-                              <TrashIcon />
-                              Delete
-                            </button>
+                          {confirmDelete === t.id ? (
+                            <span className="confirm-delete" role="group" aria-label={`Confirm deleting ${t.title}`}>
+                              <span className="confirm-text">Delete this task? This can&apos;t be undone.</span>
+                              <button type="button" className="btn btn-small btn-danger" onClick={() => removeTask(t.id)}>
+                                <TrashIcon />
+                                Yes, delete
+                              </button>
+                              {/* Focus lands on Cancel, so a stray Enter never deletes. */}
+                              <button type="button" className="text-button" onClick={() => setConfirmDelete(null)} autoFocus>Cancel</button>
+                            </span>
+                          ) : (
+                            <>
+                              {actions(t).map((a) => (
+                                <button
+                                  key={a.label}
+                                  type="button"
+                                  className={a.kind === "primary" ? "btn btn-small" : a.kind === "danger" ? "btn btn-small btn-danger" : "text-button"}
+                                  disabled={busyTask === t.id}
+                                  onClick={a.run}
+                                >
+                                  {a.kind === "danger" && <CloseIcon />}
+                                  {a.label}
+                                </button>
+                              ))}
+                              {(t.user_id === me.id || isOwnerOf(t.project_id)) && (
+                                <button
+                                  type="button"
+                                  className="btn btn-small btn-danger"
+                                  onClick={() => setConfirmDelete(t.id)}
+                                  aria-label={`Delete ${t.title}`}
+                                >
+                                  <TrashIcon />
+                                  Delete
+                                </button>
+                              )}
+                            </>
                           )}
                         </span>
                         {pickerHere && (

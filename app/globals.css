@@ -610,8 +610,11 @@ body:has(.landing) .brand { font-size: clamp(1.9rem, 7vw, 2.25rem); line-height:
   white-space: nowrap;
 }
 .due-chip strong { font-size: 1.1em; font-weight: 700; }
+.due-chip { align-items: center; }
+.due-icon { flex-shrink: 0; }
+/* Red = urgent (overdue, today, tomorrow); amber = in 2-3 days; neutral = later. Text 7.0:1 / 7.1:1. */
+.due-overdue, .due-urgent { background: var(--busy-bg); border-color: var(--busy-border); color: var(--alert-text); }
 .due-soon { background: var(--light-bg); border-color: var(--light-border); color: var(--light-text); }
-.due-overdue { background: var(--busy-bg); border-color: var(--busy-border); color: var(--alert-text); }
 .project-tag {
   font-size: 0.8rem;
   font-weight: 500;

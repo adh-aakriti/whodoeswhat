@@ -77,3 +77,21 @@ export function CalendarIcon(props: IconProps) {
     </Icon>
   );
 }
+
+export function ClockIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5V12l3 2" />
+    </Icon>
+  );
+}
+
+export function AlertIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M12 4l9 16H3z" />
+      <path d="M12 10v4.5M12 17.5v.01" />
+    </Icon>
+  );
+}

@@ -5,6 +5,7 @@ import type { Status, Task } from "@/components/TaskBoard";
 import { ChevronIcon, StatusIcon } from "@/components/Icons";
 import Avatar from "@/components/Avatar";
 import { projectTone } from "@/lib/projectTone";
+import DueChip from "@/components/DueChip";
 import { toKey, todayKey } from "@/lib/dates";
 import TaskCount from "@/components/TaskCount";
 
@@ -242,7 +243,7 @@ function CalendarTaskList({ tasks, today, statusLabels, toneFor }: { tasks: Task
         <li key={t.id} className={`cal-task status-${t.status} ${tone(t)}${t.handoff_to && t.status === "accepted" ? " has-handoff" : ""}`} data-calendar-task={t.id}>
           <span className="cal-task-title">
             {t.title}
-            {isOverdue(t, today) && <span className="overdue-label">Overdue</span>}
+            <DueChip deadline={t.deadline} status={t.status} today={today} />
           </span>
           <span className="project-tag project-name">
             <span className={`project-dot ${tone(t)}`} aria-hidden="true" />

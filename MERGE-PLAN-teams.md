@@ -95,7 +95,10 @@ Don't push the `teams` branch before step 3. Vercel builds a Preview deployment 
 
 From step 3 until step 7 finishes, live runs the **old `main` code on the migrated database**. What happens:
 
-- **While `teams-final.sql` runs** (a few seconds): it locks `tasks` to add columns, so the old app's requests wait briefly, then carry on. If the script fails, it rolls back and the old app never notices.
+- **Locks:** `teams-final.sql` takes every lock it needs on an existing table at the very start, in a fixed order: `auth.users` in SHARE ROW EXCLUSIVE mode, then `tasks` in ACCESS EXCLUSIVE mode, with `SET LOCAL lock_timeout = '5s'`. Nothing later in the script asks for a stronger lock on either table (the `auth.users` trigger is created only if missing, never dropped and recreated). Every other table it touches is created inside the transaction.
+  - **If both locks are free:** the old app waits only as long as the script runs (locally about 25 ms; on Supabase a few seconds). Sign-ins and sign-ups wait for the same few seconds.
+  - **If either lock is in use:** the script stops after 5 s with *"could not get the locks in 5 s, nothing was changed, run again in a minute"*. In the worst case the old app waits up to those 5 s, then carries on. Run the script again a minute later.
+  - `teams-rollback.sql` does the same: `auth.users`, `tasks`, then the three team tables, all ACCESS EXCLUSIVE, with the same 5 s limit and message.
 - **After it commits, the old app keeps working:**
   - New tasks land in the user's private personal project.
   - The status dropdown works on your own tasks.
@@ -169,7 +172,7 @@ All on the **test** project (`wctuhfwsursabdagnzns`) or a local in-memory Postgr
 | Second longest | 12.5 s: one "delete", from about 01:50:02 to 01:50:14 UTC, then 204 |
 | After 01:54 | All normal again (21 cycles); old-app tasks went through the new trigger correctly |
 
-**Open issue: must be fixed before live.** Nothing failed, but one old-app request waited 3 min 24 s. The most likely cause is the order in which the script takes locks: it takes the strongest lock on `tasks` in section 1, but only asks for the lock on `auth.users` (for the sign-up trigger) in section 7. If that second lock has to wait, everyone using `tasks` waits too. The fix is to take both locks at the very start, `auth.users` first, with a short `lock_timeout`, so the script either gets them within seconds or stops and changes nothing. Then repeat 7.2 and 7.3 on the test project.
+**Issue found here, fixed since (see 7.5), and the fix still needs a re-test on the test project.** Nothing failed, but one old-app request waited 3 min 24 s. The most likely cause is the order in which the script takes locks: it takes the strongest lock on `tasks` in section 1, but only asks for the lock on `auth.users` (for the sign-up trigger) in section 7. If that second lock has to wait, everyone using `tasks` waits too. The fix is to take both locks at the very start, `auth.users` first, with a short `lock_timeout`, so the script either gets them within seconds or stops and changes nothing. Then repeat 7.2 and 7.3 on the test project.
 
 ### 7.4 The three suites, on the migrated test project
 
@@ -189,3 +192,19 @@ All on the **test** project (`wctuhfwsursabdagnzns`) or a local in-memory Postgr
 | Live app (`main`) | Login, add, edit own status, delete, new sign-up (with the current project set to a team) | 16 | 0 |
 | Two-account UI (`teams`) | Join, assign, accept, decline, take, hand off, done, calendar, layout, contract | 43 | 0 |
 | **Total** | | **163** | **0** |
+
+### 7.5 Lock fix, tested on a real local PostgreSQL 17 (three sessions: script, lock holder, old app)
+
+| Check | Result |
+|---|---|
+| Locks held by `teams-final.sql` on pre-existing tables: only `auth.users` (at most SHARE ROW EXCLUSIVE) and `tasks` (ACCESS EXCLUSIVE); their indexes only ACCESS SHARE / ROW SHARE / ROW EXCLUSIVE; no ACCESS EXCLUSIVE on any system catalog | Pass |
+| Another session holds `auth.users`: final stops after 5.0 s with the plain message, nothing changed, old app not blocked at all (longest 2 ms) | Pass |
+| Another session holds `tasks`: final stops after 5.0 s, nothing changed, old app waits at most 5.0 s, no errors | Pass |
+| No contention: final commits in 23 ms, longest old-app wait 3 ms, old fields identical, old app works afterwards | Pass |
+| Rollback with `auth.users` in use: stops after 5.0 s, nothing changed; without contention: commits in 13 ms, longest old-app wait 8 ms | Pass |
+| `lock_timeout` doesn't leak into the session after an abort, a commit or a rollback | Pass |
+| Both dry runs: `DRY RUN OK` without contention, the same 5 s lock message with contention | Pass |
+| Total | 25 / 25 |
+
+PGlite regression after the change: 14 / 14 and 14 / 14.
+

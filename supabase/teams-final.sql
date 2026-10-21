@@ -14,6 +14,29 @@
 
 begin;
 
+-- ---------------------------------------------------------------------------
+-- 0. Locks: every lock this script needs on an EXISTING table, taken here, first, in one fixed order.
+--    Nothing later in the script asks for a stronger lock on these two tables, and every other table
+--    it touches is created inside this transaction (invisible to everyone else until COMMIT).
+--      auth.users   SHARE ROW EXCLUSIVE  (foreign keys from projects / profiles, and CREATE TRIGGER).
+--                   Sign-ins and sign-ups wait while it is held; reads (token checks) do not.
+--      public.tasks ACCESS EXCLUSIVE     (ALTER TABLE, triggers, policies). The old app waits while it
+--                   is held, which is only as long as the rest of this script takes to run.
+--    lock_timeout is SET LOCAL: it applies to this transaction only and ends with it. If either lock
+--    isn't free within 5 s (someone else is using the table), the script stops BEFORE changing anything,
+--    and because it is still waiting, it hasn't blocked anyone for longer than those 5 s.
+-- ---------------------------------------------------------------------------
+set local lock_timeout = '5s';
+do $$
+begin
+  lock table auth.users in share row exclusive mode;
+  lock table public.tasks in access exclusive mode;
+exception when lock_not_available then
+  raise exception 'could not get the locks in 5 s, nothing was changed, run again in a minute'
+    using errcode = '55P03';
+end;
+$$;
+
 create extension if not exists pgcrypto with schema extensions;
 
 -- ---------------------------------------------------------------------------
@@ -684,10 +707,17 @@ end;
 $$;
 revoke all on function public.handle_new_user() from public, anon, authenticated;
 
-drop trigger if exists on_auth_user_created on auth.users;
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute function public.handle_new_user();
+-- Created only if missing (never DROP + CREATE): DROP TRIGGER would need ACCESS EXCLUSIVE on auth.users,
+-- a stronger lock than the one taken in section 0. CREATE TRIGGER needs SHARE ROW EXCLUSIVE, already held.
+do $$
+begin
+  if not exists (select 1 from pg_trigger where tgname = 'on_auth_user_created' and tgrelid = 'auth.users'::regclass) then
+    create trigger on_auth_user_created
+      after insert on auth.users
+      for each row execute function public.handle_new_user();
+  end if;
+end;
+$$;
 
 -- Every insert, from either app, is normalised here, so a client cannot forge who accepted.
 --   * project_id missing (live app) -> creator's PERSONAL project (never a team: the old app has

@@ -15,6 +15,32 @@
 
 begin;
 
+-- 0. Locks: every lock this script needs, taken here, first, in one fixed order, before anything changes.
+--      auth.users      ACCESS EXCLUSIVE  (DROP TRIGGER on_auth_user_created; dropping profiles / projects
+--                      also removes their foreign-key triggers on auth.users). Sign-ins and sign-ups wait
+--                      while it is held.
+--      public.tasks    ACCESS EXCLUSIVE  (DROP TRIGGER / POLICY, DROP COLUMN). The app waits while it is held.
+--      projects, profiles, project_members  ACCESS EXCLUSIVE (DROP TABLE), if they exist.
+--    lock_timeout is SET LOCAL (this transaction only). If any lock isn't free within 5 s, the script
+--    stops before changing anything.
+set local lock_timeout = '5s';
+do $$
+declare
+  t text;
+begin
+  lock table auth.users in access exclusive mode;
+  lock table public.tasks in access exclusive mode;
+  foreach t in array array['public.projects', 'public.profiles', 'public.project_members'] loop
+    if to_regclass(t) is not null then
+      execute format('lock table %s in access exclusive mode', t);
+    end if;
+  end loop;
+exception when lock_not_available then
+  raise exception 'could not get the locks in 5 s, nothing was changed, run again in a minute'
+    using errcode = '55P03';
+end;
+$$;
+
 create temporary table teams_rollback_before on commit drop as
 select count(*) as n,
        (select count(*) from auth.users) as users,

@@ -335,7 +335,10 @@ export default function TaskBoard({ initialBoard }: { initialBoard: Board }) {
             </div>
             <div className="field">
               <label htmlFor="task-deadline">Deadline <span className="muted">(optional)</span></label>
-              <input id="task-deadline" type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
+              {/* The wrapper draws the dd/mm/yyyy hint on iOS, where an empty date field is blank. */}
+              <span className="date-field" data-empty={deadline ? "false" : "true"}>
+                <input id="task-deadline" type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
+              </span>
             </div>
             <button type="submit" className="btn btn-primary task-submit" disabled={saving} data-testid="core-submit">
               <PlusIcon size={18} />

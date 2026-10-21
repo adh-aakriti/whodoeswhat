@@ -895,6 +895,9 @@ body:has(.app-page) .topbar :focus-visible { outline-color: #fff; }
    Red text 8.0:1 or more on every card and panel; red border 5.6:1 or more. */
 .btn.btn-small.btn-danger { background: transparent; border-color: var(--busy-border); color: var(--alert-text); }
 .btn.btn-small.btn-danger:hover:not(:disabled) { background: var(--busy-bg); border-color: var(--busy-border); }
+/* Secondary card actions (Reassign, Assign, Hand off, Reopen, Cancel): outlined, visible border. */
+.btn.btn-small.btn-secondary { background: var(--card); border-color: var(--accent); color: var(--accent); }
+.btn.btn-small.btn-secondary:hover:not(:disabled) { background: var(--tint-done); border-color: var(--accent-hover); color: var(--accent-hover); }
 .confirm-delete { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.9rem; }
 .confirm-text { font-size: 0.9rem; font-weight: 600; color: var(--alert-text); }
 /* Where a new task will go, at the top of the add form. */
@@ -935,6 +938,39 @@ body:has(.app-page) .topbar :focus-visible { outline-color: #fff; }
 .has-handoff { --tint: var(--tint-handoff); --on-tint: var(--on-tint-handoff); }
 .status-icon-declined { color: var(--alert-text); }
 .open-dot { background: transparent; border: 1.5px dashed var(--light-border); width: 12px; height: 12px; }
+
+/* ---------- Task cards, final layout: title / one status line / actions ---------- */
+
+.sheet-app .sheet-row.task-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.6rem;
+  padding: 0.9rem 1rem;
+  grid-template-areas: none;
+  min-height: 0;
+}
+.task-card .cell-title { font-size: 1rem; line-height: 1.35; gap: 0.2rem; }
+/* Old migrated notes: small, muted, one line; the full text is in the tooltip. */
+.task-card .legacy-note {
+  font-size: 0.75rem;
+  font-style: normal;
+  font-weight: 400;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.task-line { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.6rem; min-width: 0; }
+.task-line .cell-status { justify-self: auto; align-self: auto; }
+.state-detail { font-size: 0.85rem; color: var(--muted); }
+.due-date { font-size: 0.85rem; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.task-line .cell-owner { display: inline-flex; align-items: center; font-size: 0.9rem; font-weight: 500; margin-left: auto; }
+.task-line .cell-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.task-card .cell-actions { justify-self: auto; }
+.task-card .task-picker { margin-top: 0.1rem; }
+.project-group + .project-group { margin-top: 2.5rem; }
 
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }

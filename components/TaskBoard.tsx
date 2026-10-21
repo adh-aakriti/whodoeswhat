@@ -222,19 +222,21 @@ export default function TaskBoard({ initialBoard }: { initialBoard: Board }) {
     return null;
   }
 
-  function stateNote(t: Task) {
-    if (t.handoff_to && t.status === "accepted") return `Handoff pending → ${displayName(t.handoff_to)}`;
+  // Small muted text beside the status label. The owner is shown right after it on the same line, and
+  // whoever accepted, declined or took a task is its owner, so their name isn't repeated here.
+  function stateDetail(t: Task) {
+    if (t.handoff_to && t.status === "accepted") return `to ${displayName(t.handoff_to)}`;
     switch (t.status) {
       case "open":
-        return "Open: anyone in the project can take it";
+        return "anyone can take it";
       case "proposed":
-        return t.assignee_id === me.id ? "Proposed to you" : `Waiting for ${displayName(t.assignee_id)} to accept`;
+        return t.assignee_id === me.id ? "waiting for you" : "waiting to accept";
       case "accepted":
-        return `Accepted by ${displayName(t.accepted_by ?? t.assignee_id)}${t.accepted_at ? ` · ${formatWhen(t.accepted_at)}` : ""}`;
+        return t.accepted_at ? formatWhen(t.accepted_at) : "";
       case "declined":
-        return `Declined by ${displayName(t.declined_by ?? t.assignee_id)}${t.declined_at ? ` · ${formatWhen(t.declined_at)}` : ""}`;
+        return t.declined_at ? formatWhen(t.declined_at) : "";
       case "done":
-        return `Done${t.completed_at ? ` · ${formatWhen(t.completed_at)}` : ""}`;
+        return t.completed_at ? formatWhen(t.completed_at) : "";
     }
   }
 
@@ -397,34 +399,33 @@ export default function TaskBoard({ initialBoard }: { initialBoard: Board }) {
                       g.project.isPersonal && t.project && t.project !== "General" ? `List: ${t.project}` : "",
                     ].filter(Boolean).join(" · ");
                     const pickerHere = picker?.taskId === t.id ? picker : null;
+                    const handoff = Boolean(t.handoff_to) && t.status === "accepted";
                     const projectMembers = membersOf(t.project_id);
                     const choices = pickerHere?.kind === "handoff" ? projectMembers.filter((m) => m.id !== me.id) : projectMembers;
                     return (
                       <li
                         key={t.id}
-                        className={`sheet-row status-${t.status} ${toneOf(t.project_id)}${t.handoff_to && t.status === "accepted" ? " has-handoff" : ""}`}
+                        className={`sheet-row task-card status-${t.status} ${toneOf(t.project_id)}${handoff ? " has-handoff" : ""}`}
                         data-testid="core-item"
                       >
                         <span className="cell-title">
                           {t.title}
-                          <span className="title-meta">
-                            <span className="state-note">{stateNote(t)}</span>
-                            <DueChip deadline={t.deadline} status={t.status} today={today} />
+                          {legacyNote && <span className="legacy-note" title={legacyNote}>{legacyNote}</span>}
+                        </span>
+                        {/* One line: status (symbol + words) and its detail, due chip and date, owner. */}
+                        <span className="task-line">
+                          <span className="cell-status">
+                            <StatusIcon status={handoff ? "handoff" : t.status} />
+                            {handoff ? "Handoff pending" : STATUS_LABELS[t.status]}
                           </span>
-                          {legacyNote && <span className="legacy-note">{legacyNote}</span>}
-                        </span>
-                        <span className={`cell-owner${t.assignee_id ? "" : " muted"}`}>
-                          <span className="cell-label">Owner </span>
-                          {t.assignee_id && <Avatar name={displayName(t.assignee_id)} />}
-                          {t.assignee_id ? displayName(t.assignee_id) : "Nobody yet"}
-                        </span>
-                        <span className={`cell-due${t.deadline ? "" : " muted"}`}>
-                          <span className="cell-label">Due </span>
-                          {t.deadline ? formatDate(t.deadline) : "No date"}
-                        </span>
-                        <span className="cell-status">
-                          <StatusIcon status={t.handoff_to && t.status === "accepted" ? "handoff" : t.status} />
-                          {t.handoff_to && t.status === "accepted" ? "Handoff pending" : STATUS_LABELS[t.status]}
+                          {stateDetail(t) && <span className="state-detail">{stateDetail(t)}</span>}
+                          <DueChip deadline={t.deadline} status={t.status} today={today} />
+                          {t.deadline && <span className="due-date"><span className="cell-label">Due </span>{formatDate(t.deadline)}</span>}
+                          <span className={`cell-owner${t.assignee_id ? "" : " muted"}`}>
+                            <span className="cell-label">Owner </span>
+                            {t.assignee_id && <Avatar name={displayName(t.assignee_id)} />}
+                            {t.assignee_id ? displayName(t.assignee_id) : "Nobody yet"}
+                          </span>
                         </span>
                         <span className="cell-actions">
                           {confirmDelete === t.id ? (
@@ -435,7 +436,7 @@ export default function TaskBoard({ initialBoard }: { initialBoard: Board }) {
                                 Yes, delete
                               </button>
                               {/* Focus lands on Cancel, so a stray Enter never deletes. */}
-                              <button type="button" className="text-button" onClick={() => setConfirmDelete(null)} autoFocus>Cancel</button>
+                              <button type="button" className="btn btn-small btn-secondary" onClick={() => setConfirmDelete(null)} autoFocus>Cancel</button>
                             </span>
                           ) : (
                             <>
@@ -443,7 +444,7 @@ export default function TaskBoard({ initialBoard }: { initialBoard: Board }) {
                                 <button
                                   key={a.label}
                                   type="button"
-                                  className={a.kind === "primary" ? "btn btn-small" : a.kind === "danger" ? "btn btn-small btn-danger" : "text-button"}
+                                  className={`btn btn-small${a.kind === "danger" ? " btn-danger" : a.kind === "secondary" ? " btn-secondary" : ""}`}
                                   disabled={busyTask === t.id}
                                   onClick={a.run}
                                 >
@@ -493,7 +494,7 @@ export default function TaskBoard({ initialBoard }: { initialBoard: Board }) {
                             <button type="submit" className="btn btn-small" disabled={busyTask === t.id || (pickerHere.kind === "handoff" && !pickerHere.to)}>
                               {pickerHere.kind === "handoff" ? "Ask them" : "Save"}
                             </button>
-                            <button type="button" className="text-button" onClick={() => setPicker(null)}>Cancel</button>
+                            <button type="button" className="btn btn-small btn-secondary" onClick={() => setPicker(null)}>Cancel</button>
                           </form>
                         )}
                       </li>

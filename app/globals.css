@@ -248,6 +248,8 @@ body:has(.landing) .brand { font-size: clamp(1.9rem, 7vw, 2.25rem); line-height:
 .tagline-sm { margin: 0 0 1rem; font-size: 1.125rem; }
 @media (min-width: 600px) { .landing .tagline { font-size: 1.5rem; } }
 .display { font-size: clamp(2.25rem, 9vw, 2.75rem); max-width: 14ch; margin-bottom: 1.75rem; }
+/* One plain sentence under the headline: who it's for and how it works, before the button. */
+.landing .lead { margin: -0.75rem 0 1.75rem; max-width: 36ch; font-size: 1.0625rem; line-height: 1.5; color: var(--muted); }
 .cta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.25rem; }
 .landing-sheet { margin: 3rem 0 0; border-top: 2px solid var(--ink); }
 .sheet-caption {

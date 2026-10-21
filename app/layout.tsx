@@ -11,7 +11,7 @@ const sans = DM_Sans({ subsets: ["latin"], variable: "--font-sans", display: "sw
 export const metadata: Metadata = {
   title: "WhoDoesWhat",
   description:
-    "WhoDoesWhat helps university project teams split work into tasks with owners and deadlines so everyone knows what's next.",
+    "WhoDoesWhat is a shared task list for university project teams: every task has one named owner, who accepts it, and a deadline.",
 };
 
 export const viewport: Viewport = {

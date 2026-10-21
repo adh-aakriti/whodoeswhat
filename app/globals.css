@@ -20,13 +20,15 @@
   --card: #ffffff;          /* ink 17:1, muted 7.2:1 */
   --card-border: #8f887d;   /* >= 3:1 on page, panel and card */
 
-  /* Project colours (stripe + dot), all >= 4.1:1 on page, panel and card. */
-  --project-1: #5b7a4e;     /* sage */
-  --project-2: #946512;     /* ochre */
-  --project-3: #a5432c;     /* brick */
-  --project-4: #47648a;     /* slate */
-  --project-5: #7d4a72;     /* plum */
-  --project-6: #2c6e6a;     /* teal */
+  /* Project colours (stripe + dot): 7 muted hues, no reds or greens (red = urgent / destructive,
+     green = Personal). All >= 4.5:1 on page, area, panel and card; every pair clearly different. */
+  --project-1: #2c5fa8;     /* blue */
+  --project-2: #57409c;     /* indigo */
+  --project-3: #7d3f73;     /* plum */
+  --project-4: #8a6510;     /* ochre */
+  --project-5: #13748c;     /* teal-blue */
+  --project-6: #626a75;     /* slate */
+  --project-7: #7a4f2e;     /* brown */
   --project-personal: #3f6b55; /* Personal, always: neutral green, >= 5.3:1 on page, area and card */
 
   /* Status label tints; ink text on them >= 14:1, symbol colour >= 4.7:1. */
@@ -744,6 +746,7 @@ body:has(.app-page) .topbar :focus-visible { outline-color: #fff; }
 .tone-4 { --tone: var(--project-4); }
 .tone-5 { --tone: var(--project-5); }
 .tone-6 { --tone: var(--project-6); }
+.tone-7 { --tone: var(--project-7); }
 .tone-personal { --tone: var(--project-personal); }
 .project-name { display: inline-flex; align-items: center; gap: 0.5rem; min-width: 0; }
 .project-dot { display: inline-block; flex-shrink: 0; width: 9px; height: 9px; border-radius: 50%; background: var(--tone); }

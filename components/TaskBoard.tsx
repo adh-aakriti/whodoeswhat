@@ -6,7 +6,7 @@ import { CalendarIcon, ListIcon, PlusIcon, StatusIcon, TrashIcon } from "@/compo
 import Avatar from "@/components/Avatar";
 import TaskCalendar from "@/components/TaskCalendar";
 import ProjectBar from "@/components/ProjectBar";
-import { toneClass } from "@/lib/projectTone";
+import { assignTones } from "@/lib/projectTone";
 import { todayKey } from "@/lib/dates";
 import DueChip from "@/components/DueChip";
 import TaskCount from "@/components/TaskCount";
@@ -68,7 +68,9 @@ export default function TaskBoard({ initialBoard }: { initialBoard: Board }) {
     return p ? (p.isPersonal ? "Personal" : p.name) : "Project";
   };
   const isOwnerOf = (projectId: string) => projectById.get(projectId)?.role === "owner";
-  const toneOf = (projectId: string) => toneClass(projectName(projectId), projectById.get(projectId)?.isPersonal ?? false);
+  // One colour per project for this viewer, never shared between two of their projects (up to 7).
+  const tones = useMemo(() => assignTones(board.projects), [board.projects]);
+  const toneOf = (projectId: string) => tones.get(projectId) ?? "tone-6";
 
   // ---- Keeping the board fresh -------------------------------------------------------------
   // Every local change bumps `mutation`; a refresh that started before a local change is dropped,

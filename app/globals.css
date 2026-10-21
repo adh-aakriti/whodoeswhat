@@ -27,6 +27,7 @@
   --project-4: #47648a;     /* slate */
   --project-5: #7d4a72;     /* plum */
   --project-6: #2c6e6a;     /* teal */
+  --project-personal: #3f6b55; /* Personal, always: neutral green, >= 5.3:1 on page, area and card */
 
   /* Status label tints; ink text on them >= 14:1, symbol colour >= 4.7:1. */
   --tint-proposed: #ece9e3;
@@ -35,6 +36,10 @@
   --on-tint-proposed: #6b655c;
   --on-tint-accepted: #8a5d0b;
   --on-tint-done: #2b6a45;
+  --tint-open: #e3edf7;     /* open (no owner yet): light blue, symbol 6.0:1 */
+  --on-tint-open: #3a5a80;
+  --tint-handoff: #efe6f1;  /* handoff pending: light plum, symbol 6.7:1 */
+  --on-tint-handoff: #6e3f66;
 
   /* Livelier /app: deep green band, sage task area, yellow/red load states. */
   --accent-deep: #16432d;   /* white on it 11.2:1 */
@@ -517,7 +522,7 @@ body:has(.landing) .brand { font-size: clamp(1.9rem, 7vw, 2.25rem); line-height:
   flex-direction: column;
   gap: 0.35rem;
   padding: 0.85rem 1rem;
-  background: color-mix(in srgb, var(--tone, var(--card)) 7%, var(--card));
+  background: color-mix(in srgb, var(--tone, var(--card)) 10%, var(--card));
   border: 1px solid var(--card-border);
   border-left: 4px solid var(--tone, var(--card-border));
   border-radius: 6px;
@@ -719,13 +724,14 @@ body:has(.app-page) .topbar :focus-visible { outline-color: #fff; }
 .tone-4 { --tone: var(--project-4); }
 .tone-5 { --tone: var(--project-5); }
 .tone-6 { --tone: var(--project-6); }
+.tone-personal { --tone: var(--project-personal); }
 .project-name { display: inline-flex; align-items: center; gap: 0.5rem; min-width: 0; }
 .project-dot { display: inline-block; flex-shrink: 0; width: 9px; height: 9px; border-radius: 50%; background: var(--tone); }
 
 .sheet-app { display: flex; flex-direction: column; gap: 0.75rem; padding-top: 0.75rem; }
 .sheet-app .sheet-row {
   padding: 0.85rem 1rem;
-  background: color-mix(in srgb, var(--tone, var(--card)) 7%, var(--card)); /* very light wash of the project colour */
+  background: color-mix(in srgb, var(--tone, var(--card)) 10%, var(--card)); /* very light wash of the project colour */
   border: 1px solid var(--card-border);
   border-left: 4px solid var(--tone, var(--card-border));
   border-radius: 6px;
@@ -749,6 +755,9 @@ body:has(.app-page) .topbar :focus-visible { outline-color: #fff; }
 }
 .sheet-app .cell-status .status-icon,
 .cal-task .cell-status .status-icon { color: var(--on-tint); }
+/* App labels are written in sentence case ("Handoff pending"); only the landing example capitalises. */
+.sheet-app .cell-status,
+.cal-task .cell-status { text-transform: none; }
 /* Keep the 44px tap target without making the tint 44px tall. */
 .sheet-app .cell-status select { margin: -6px 0; }
 
@@ -853,6 +862,9 @@ body:has(.app-page) .topbar :focus-visible { outline-color: #fff; }
 }
 
 .btn-small { min-height: 44px; padding: 0.4rem 0.95rem; font-size: 0.9rem; }
+/* The main action on a task card (Accept, I'll take it, Mark done, Accept handoff, Save): green like Add task. */
+.btn.btn-small { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+.btn.btn-small:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
 /* Where a new task will go, at the top of the add form. */
 .adding-to { margin: 0; font-size: 0.9rem; color: var(--muted); }
 .adding-to strong { color: var(--ink); font-weight: 600; }
@@ -883,9 +895,12 @@ body:has(.app-page) .topbar :focus-visible { outline-color: #fff; }
 .task-picker select { width: auto; min-width: 12rem; max-width: 100%; }
 
 /* Open and declined: their own shapes and words; tints only reinforce them. */
-.status-open { --tint: var(--light-bg); --on-tint: var(--light-text); }
+.status-open { --tint: var(--tint-open); --on-tint: var(--on-tint-open); }
 .status-declined { --tint: var(--busy-bg); --on-tint: var(--alert-text); }
-.status-icon-open { color: var(--light-text); }
+.status-icon-open { color: var(--on-tint-open); }
+.status-icon-handoff { color: var(--on-tint-handoff); }
+/* After the status-* rules: a pending handoff overrides "accepted" with its own tint and symbol colour. */
+.has-handoff { --tint: var(--tint-handoff); --on-tint: var(--on-tint-handoff); }
 .status-icon-declined { color: var(--alert-text); }
 .open-dot { background: transparent; border: 1.5px dashed var(--light-border); width: 12px; height: 12px; }
 

@@ -46,14 +46,15 @@ export function ListChecksIcon(props: IconProps) {
 }
 
 // Shape carries the meaning; the text label next to it says the same thing.
-export function StatusIcon({ status, ...props }: IconProps & { status: Status }) {
+export function StatusIcon({ status, ...props }: IconProps & { status: Status | "handoff" }) {
   return (
     <Icon className={`status-icon status-icon-${status}`} {...props}>
-      {/* open: dashed ring (no owner yet); declined: ring with a slash */}
+      {/* open: dashed ring (no owner yet); declined: ring with a slash; handoff: ring with an arrow */}
       <circle cx="12" cy="12" r="8" strokeDasharray={status === "open" ? "3 2.6" : undefined} />
       {status === "accepted" && <path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor" />}
       {status === "done" && <path d="M8.5 12.5l2.5 2.5 4.5-5" />}
       {status === "declined" && <path d="M6.5 17.5l11-11" />}
+      {status === "handoff" && <path d="M8 12h8M13 9l3 3-3 3" />}
     </Icon>
   );
 }

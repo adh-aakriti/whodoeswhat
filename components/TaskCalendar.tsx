@@ -48,10 +48,12 @@ export default function TaskCalendar({
   tasks,
   statusLabels,
   onShowList,
+  toneFor,
 }: {
   tasks: Task[];
   statusLabels: Record<Status, string>;
   onShowList: () => void;
+  toneFor?: (t: Task) => string; // CSS class for the task's project colour
 }) {
   const [today, setToday] = useState(todayKey);
   const [shown, setShown] = useState<Month>(() => parseKey(today));
@@ -207,7 +209,7 @@ export default function TaskCalendar({
             {selectedTasks.length === 0 ? (
               <p className="muted cal-none">Nothing due on this day.</p>
             ) : (
-              <CalendarTaskList tasks={selectedTasks} today={today} statusLabels={statusLabels} />
+              <CalendarTaskList tasks={selectedTasks} today={today} statusLabels={statusLabels} toneFor={toneFor} />
             )}
           </>
         ) : (
@@ -221,7 +223,7 @@ export default function TaskCalendar({
             No deadline
             <span className="project-count"><TaskCount n={undated.length} /></span>
           </h3>
-          <CalendarTaskList tasks={undated} today={today} statusLabels={statusLabels} />
+          <CalendarTaskList tasks={undated} today={today} statusLabels={statusLabels} toneFor={toneFor} />
           <button type="button" className="text-button" onClick={onShowList}>
             Back to list view
           </button>
@@ -232,17 +234,18 @@ export default function TaskCalendar({
 }
 
 // Read-only rows. Deliberately no data-testid="core-item": the list view is the only place that has it.
-function CalendarTaskList({ tasks, today, statusLabels }: { tasks: Task[]; today: string; statusLabels: Record<Status, string> }) {
+function CalendarTaskList({ tasks, today, statusLabels, toneFor }: { tasks: Task[]; today: string; statusLabels: Record<Status, string>; toneFor?: (t: Task) => string }) {
+  const tone = (t: Task) => toneFor?.(t) ?? `tone-${projectTone(t.project)}`;
   return (
     <ul className="cal-tasks">
       {tasks.map((t) => (
-        <li key={t.id} className={`cal-task status-${t.status} tone-${projectTone(t.project)}`} data-calendar-task={t.id}>
+        <li key={t.id} className={`cal-task status-${t.status} ${tone(t)}${t.handoff_to && t.status === "accepted" ? " has-handoff" : ""}`} data-calendar-task={t.id}>
           <span className="cal-task-title">
             {t.title}
             {isOverdue(t, today) && <span className="overdue-label">Overdue</span>}
           </span>
           <span className="project-tag project-name">
-            <span className={`project-dot tone-${projectTone(t.project)}`} aria-hidden="true" />
+            <span className={`project-dot ${tone(t)}`} aria-hidden="true" />
             {t.project}
           </span>
           <span className="cal-task-meta">
@@ -251,8 +254,8 @@ function CalendarTaskList({ tasks, today, statusLabels }: { tasks: Task[]; today
               {t.assignee || "Unassigned"}
             </span>
             <span className="cell-status">
-              <StatusIcon status={t.status} />
-              {statusLabels[t.status]}
+              <StatusIcon status={t.handoff_to && t.status === "accepted" ? "handoff" : t.status} />
+              {t.handoff_to && t.status === "accepted" ? "Handoff pending" : statusLabels[t.status]}
             </span>
           </span>
         </li>

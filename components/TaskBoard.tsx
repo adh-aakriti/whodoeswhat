@@ -6,7 +6,7 @@ import { CalendarIcon, ListIcon, PlusIcon, StatusIcon, TrashIcon } from "@/compo
 import Avatar from "@/components/Avatar";
 import TaskCalendar from "@/components/TaskCalendar";
 import ProjectBar from "@/components/ProjectBar";
-import { projectTone } from "@/lib/projectTone";
+import { toneClass } from "@/lib/projectTone";
 import { todayKey } from "@/lib/dates";
 import DueChip from "@/components/DueChip";
 import TaskCount from "@/components/TaskCount";
@@ -68,6 +68,7 @@ export default function TaskBoard({ initialBoard }: { initialBoard: Board }) {
     return p ? (p.isPersonal ? "Personal" : p.name) : "Project";
   };
   const isOwnerOf = (projectId: string) => projectById.get(projectId)?.role === "owner";
+  const toneOf = (projectId: string) => toneClass(projectName(projectId), projectById.get(projectId)?.isPersonal ?? false);
 
   // ---- Keeping the board fresh -------------------------------------------------------------
   // Every local change bumps `mutation`; a refresh that started before a local change is dropped,
@@ -375,7 +376,7 @@ export default function TaskBoard({ initialBoard }: { initialBoard: Board }) {
               <section key={g.project.id} className="project-group" aria-labelledby={`project-group-${i}`}>
                 <h2 id={`project-group-${i}`} className="project-heading">
                   <span className="project-name">
-                    <span className={`project-dot tone-${projectTone(projectName(g.project.id))}`} aria-hidden="true" />
+                    <span className={`project-dot ${toneOf(g.project.id)}`} aria-hidden="true" />
                     {projectName(g.project.id)}
                   </span>
                   <span className="project-count">
@@ -394,7 +395,7 @@ export default function TaskBoard({ initialBoard }: { initialBoard: Board }) {
                     return (
                       <li
                         key={t.id}
-                        className={`sheet-row status-${t.status} tone-${projectTone(projectName(t.project_id))}${t.handoff_to ? " has-handoff" : ""}`}
+                        className={`sheet-row status-${t.status} ${toneOf(t.project_id)}${t.handoff_to && t.status === "accepted" ? " has-handoff" : ""}`}
                         data-testid="core-item"
                       >
                         <span className="cell-title">
@@ -415,8 +416,8 @@ export default function TaskBoard({ initialBoard }: { initialBoard: Board }) {
                           {t.deadline ? formatDate(t.deadline) : "No date"}
                         </span>
                         <span className="cell-status">
-                          <StatusIcon status={t.status} />
-                          {STATUS_LABELS[t.status]}
+                          <StatusIcon status={t.handoff_to && t.status === "accepted" ? "handoff" : t.status} />
+                          {t.handoff_to && t.status === "accepted" ? "Handoff pending" : STATUS_LABELS[t.status]}
                         </span>
                         <span className="cell-actions">
                           {actions(t).map((a) => (
@@ -484,7 +485,7 @@ export default function TaskBoard({ initialBoard }: { initialBoard: Board }) {
         {/* Client-only (needs the user's local "today"). Calendar rows never carry core-item. */}
         {today && (
           <div className="board-calendar">
-            <TaskCalendar tasks={calendarTasks} statusLabels={STATUS_LABELS} onShowList={() => setView("list")} />
+            <TaskCalendar tasks={calendarTasks} statusLabels={STATUS_LABELS} onShowList={() => setView("list")} toneFor={(t) => toneOf(t.project_id)} />
           </div>
         )}
       </div>
